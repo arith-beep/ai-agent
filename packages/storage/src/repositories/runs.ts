@@ -65,6 +65,7 @@ export async function listRunsForOrg(orgId: string, limit = 100) {
 export async function createTrace(orgId: string, runType: "agent" | "workflow", runId: string) {
   const db = getDb();
   const [trace] = await db.insert(schema.traces).values({ orgId, runType, runId, status: "running" }).returning();
+  if (!trace) throw new Error("Failed to create trace");
   return trace;
 }
 
@@ -97,6 +98,7 @@ export async function startSpan(input: {
       status: "running",
     })
     .returning();
+  if (!span) throw new Error("Failed to create span");
   return span;
 }
 

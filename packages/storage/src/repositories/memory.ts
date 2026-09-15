@@ -17,6 +17,7 @@ export async function getOrCreateThread(agentId: string, opts: { userId?: string
 export async function appendMessage(threadId: string, role: "user" | "assistant" | "tool" | "system", content: unknown, toolCalls?: unknown) {
   const db = getDb();
   const [message] = await db.insert(schema.memoryMessages).values({ threadId, role, content, toolCalls }).returning();
+  if (!message) throw new Error("Failed to append message");
   return message;
 }
 

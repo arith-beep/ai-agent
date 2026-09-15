@@ -29,6 +29,21 @@ export async function listKnowledgeBases(orgId: string) {
   return db.query.knowledgeBases.findMany({ where: eq(schema.knowledgeBases.orgId, orgId) });
 }
 
+export async function getKnowledgeBaseById(knowledgeBaseId: string) {
+  const db = getDb();
+  return db.query.knowledgeBases.findFirst({ where: eq(schema.knowledgeBases.id, knowledgeBaseId) });
+}
+
+export async function getDocument(documentId: string) {
+  const db = getDb();
+  return db.query.knowledgeDocuments.findFirst({ where: eq(schema.knowledgeDocuments.id, documentId) });
+}
+
+export async function listDocuments(knowledgeBaseId: string) {
+  const db = getDb();
+  return db.query.knowledgeDocuments.findMany({ where: eq(schema.knowledgeDocuments.knowledgeBaseId, knowledgeBaseId) });
+}
+
 export async function createDocument(knowledgeBaseId: string, sourceUri: string, metadata?: Record<string, unknown>) {
   const db = getDb();
   const [doc] = await db
