@@ -193,6 +193,15 @@ export async function connectAgents(
   await db.insert(schema.agentConnections).values({ agentId, connectedAgentId, relationshipType }).onConflictDoNothing();
 }
 
+export async function listConnections(agentId: string) {
+  const db = getDb();
+  return db
+    .select({ connectedAgent: schema.agents, relationshipType: schema.agentConnections.relationshipType })
+    .from(schema.agentConnections)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.agentConnections.connectedAgentId))
+    .where(eq(schema.agentConnections.agentId, agentId));
+}
+
 export async function areAgentsConnected(agentId: string, otherAgentId: string) {
   const db = getDb();
   const link = await db.query.agentConnections.findFirst({

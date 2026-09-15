@@ -61,6 +61,7 @@ export async function createDocument(knowledgeBaseId: string, sourceUri: string,
     .insert(schema.knowledgeDocuments)
     .values({ knowledgeBaseId, sourceUri, metadata: metadata ?? {}, status: "pending" })
     .returning();
+  if (!doc) throw new Error("Failed to create document");
   return doc;
 }
 

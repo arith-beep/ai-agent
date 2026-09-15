@@ -6,6 +6,24 @@ export async function getOrCreateUserByEmail(email: string, name?: string) {
   const existing = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
   if (existing) return existing;
   const [created] = await db.insert(schema.users).values({ email, name }).returning();
+  if (!created) throw new Error("Failed to create user");
+  return created;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = getDb();
+  return db.query.users.findFirst({ where: eq(schema.users.email, email) });
+}
+
+export async function getUserById(userId: string) {
+  const db = getDb();
+  return db.query.users.findFirst({ where: eq(schema.users.id, userId) });
+}
+
+export async function createUserWithPassword(email: string, name: string, passwordHash: string) {
+  const db = getDb();
+  const [created] = await db.insert(schema.users).values({ email, name, passwordHash }).returning();
+  if (!created) throw new Error("Failed to create user");
   return created;
 }
 
@@ -31,6 +49,15 @@ export async function getMembership(orgId: string, userId: string) {
   return db.query.orgMembers.findFirst({
     where: and(eq(schema.orgMembers.orgId, orgId), eq(schema.orgMembers.userId, userId)),
   });
+}
+
+export async function listOrgMembers(orgId: string) {
+  const db = getDb();
+  return db
+    .select({ userId: schema.users.id, email: schema.users.email, name: schema.users.name, role: schema.orgMembers.role })
+    .from(schema.orgMembers)
+    .innerJoin(schema.users, eq(schema.users.id, schema.orgMembers.userId))
+    .where(eq(schema.orgMembers.orgId, orgId));
 }
 
 export async function listDepartments(orgId: string) {
