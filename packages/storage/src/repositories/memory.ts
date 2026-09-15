@@ -1,6 +1,22 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb, schema } from "../db";
 
+export async function getMessageById(messageId: string) {
+  const db = getDb();
+  return db.query.memoryMessages.findFirst({ where: eq(schema.memoryMessages.id, messageId) });
+}
+
+/** Resolves the organization a thread belongs to via its agent (memory_threads has no orgId column of its own). */
+export async function getThreadOrgId(threadId: string): Promise<string | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select({ orgId: schema.agents.orgId })
+    .from(schema.memoryThreads)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.memoryThreads.agentId))
+    .where(eq(schema.memoryThreads.id, threadId));
+  return row?.orgId;
+}
+
 export async function getOrCreateThread(agentId: string, opts: { userId?: string; resourceId?: string; threadId?: string }) {
   const db = getDb();
   if (opts.threadId) {

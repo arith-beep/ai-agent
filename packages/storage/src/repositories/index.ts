@@ -8,5 +8,6 @@ export * as messagingRepo from "./messaging";
 export * as workflowsRepo from "./workflows";
 export * as tasksRepo from "./tasks";
 export * as policyRepo from "./policy";
+export * as schedulingRepo from "./scheduling";
 export * as credentialsRepo from "./credentials";
 export * as auditRepo from "./audit";

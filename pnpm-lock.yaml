@@ -15,6 +15,46 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  apps/worker:
+    dependencies:
+      '@ai-agent/agent-runtime':
+        specifier: workspace:*
+        version: link:../../packages/agent-runtime
+      '@ai-agent/memory':
+        specifier: workspace:*
+        version: link:../../packages/memory
+      '@ai-agent/message-bus':
+        specifier: workspace:*
+        version: link:../../packages/message-bus
+      '@ai-agent/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      '@ai-agent/rag':
+        specifier: workspace:*
+        version: link:../../packages/rag
+      '@ai-agent/scheduler':
+        specifier: workspace:*
+        version: link:../../packages/scheduler
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@ai-agent/workflow-engine':
+        specifier: workspace:*
+        version: link:../../packages/workflow-engine
+      bullmq:
+        specifier: ^5.34.4
+        version: 5.81.5
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/agent-runtime:
     dependencies:
       '@ai-agent/memory':
@@ -53,6 +93,22 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/auth:
+    dependencies:
+      '@ai-agent/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../storage
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -213,6 +269,31 @@ importers:
       '@types/pdf-parse':
         specifier: ^1.1.4
         version: 1.1.5
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/scheduler:
+    dependencies:
+      '@ai-agent/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@ai-agent/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@ai-agent/workflow-engine':
+        specifier: workspace:*
+        version: link:../workflow-engine
+      cron-parser:
+        specifier: ^4.9.0
+        version: 4.9.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

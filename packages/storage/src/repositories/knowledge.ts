@@ -44,6 +44,17 @@ export async function listDocuments(knowledgeBaseId: string) {
   return db.query.knowledgeDocuments.findMany({ where: eq(schema.knowledgeDocuments.knowledgeBaseId, knowledgeBaseId) });
 }
 
+/** Resolves the organization a document belongs to via its knowledge base. */
+export async function getDocumentOrgId(documentId: string): Promise<string | undefined> {
+  const db = getDb();
+  const [row] = await db
+    .select({ orgId: schema.knowledgeBases.orgId })
+    .from(schema.knowledgeDocuments)
+    .innerJoin(schema.knowledgeBases, eq(schema.knowledgeBases.id, schema.knowledgeDocuments.knowledgeBaseId))
+    .where(eq(schema.knowledgeDocuments.id, documentId));
+  return row?.orgId;
+}
+
 export async function createDocument(knowledgeBaseId: string, sourceUri: string, metadata?: Record<string, unknown>) {
   const db = getDb();
   const [doc] = await db
