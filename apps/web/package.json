@@ -20,6 +20,8 @@
     "@ai-agent/storage": "workspace:*",
     "@ai-agent/tasks": "workspace:*",
     "@ai-agent/tools": "workspace:*",
+    "@ai-agent/workflow-engine": "workspace:*",
+    "@xyflow/react": "^12.4.0",
     "bcryptjs": "^2.4.3",
     "next": "15.1.4",
     "next-auth": "5.0.0-beta.25",

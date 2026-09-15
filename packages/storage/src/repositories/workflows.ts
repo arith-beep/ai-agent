@@ -21,6 +21,22 @@ export async function createWorkflow(input: {
       createdBy: input.createdBy,
     })
     .returning();
+  if (!workflow) throw new Error("Failed to create workflow");
+  return workflow;
+}
+
+export async function updateWorkflow(
+  workflowId: string,
+  input: { name?: string; description?: string; definition?: WorkflowDefinition; status?: (typeof schema.workflowStatusEnum.enumValues)[number] },
+) {
+  const db = getDb();
+  const patch: Partial<typeof schema.workflows.$inferInsert> = { updatedAt: new Date() };
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.description !== undefined) patch.description = input.description;
+  if (input.definition !== undefined) patch.definition = input.definition as unknown as Record<string, unknown>;
+  if (input.status !== undefined) patch.status = input.status;
+
+  const [workflow] = await db.update(schema.workflows).set(patch).where(eq(schema.workflows.id, workflowId)).returning();
   return workflow;
 }
 
@@ -53,6 +69,15 @@ export async function createWorkflowRun(input: {
     .returning();
   if (!run) throw new Error("Failed to create workflow run");
   return run;
+}
+
+export async function listWorkflowRuns(workflowId: string, limit = 50) {
+  const db = getDb();
+  return db.query.workflowRuns.findMany({
+    where: eq(schema.workflowRuns.workflowId, workflowId),
+    orderBy: (r, { desc }) => [desc(r.startedAt)],
+    limit,
+  });
 }
 
 export async function getWorkflowRun(runId: string) {

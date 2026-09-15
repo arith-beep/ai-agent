@@ -14,11 +14,16 @@ export const delayStepHandler: NodeHandler = async (node, input, _state, ctx) =>
 
 export const approvalStepHandler: NodeHandler = async (node, input, _state, ctx) => {
   if (node.type !== "approval") throw new Error("approvalStepHandler received a non-approval node");
+  const requestedByType = ctx.agentId ? "agent" : "human";
+  const requestedById = ctx.agentId ?? (ctx.triggeredByType === "manual" ? ctx.triggeredById : undefined);
+  if (!requestedById) {
+    throw new Error("approval node has no agent or human to attribute the request to — trigger this workflow manually, or run it as part of an agent.");
+  }
   const approval = await policyRepo.createApproval({
     orgId: ctx.orgId,
     actionType: "workflow.approval",
-    requestedByType: "agent",
-    requestedById: ctx.agentId ?? "workflow",
+    requestedByType,
+    requestedById,
     workflowRunId: ctx.workflowRunId,
     payload: { input, approverRole: node.approverRole },
   });

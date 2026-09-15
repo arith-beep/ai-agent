@@ -3,7 +3,7 @@ import { getRedisConnection } from "./connection";
 
 export const QUEUE_NAMES = {
   agentRun: "agent-run",
-  workflowStep: "workflow-step",
+  workflowRun: "workflow-run",
   workflowResume: "workflow-resume",
   deliverAgentMessage: "deliver-agent-message",
   scheduledTrigger: "scheduled-trigger",
@@ -17,6 +17,13 @@ export interface AgentRunJobData {
   agentId: string;
   input: unknown;
   threadId?: string;
+}
+
+export interface WorkflowRunJobData {
+  runId: string;
+  orgId: string;
+  workflowId: string;
+  input: unknown;
 }
 
 export interface WorkflowResumeJobData {
@@ -61,6 +68,7 @@ const defaultJobOptions: JobsOptions = {
 
 let queues: {
   agentRun: Queue<AgentRunJobData>;
+  workflowRun: Queue<WorkflowRunJobData>;
   workflowResume: Queue<WorkflowResumeJobData>;
   deliverAgentMessage: Queue<DeliverAgentMessageJobData>;
   scheduledTrigger: Queue<ScheduledTriggerJobData>;
@@ -74,6 +82,7 @@ export function getQueues() {
     const connection = getRedisConnection();
     queues = {
       agentRun: new Queue(QUEUE_NAMES.agentRun, { connection, defaultJobOptions }),
+      workflowRun: new Queue(QUEUE_NAMES.workflowRun, { connection, defaultJobOptions }),
       workflowResume: new Queue(QUEUE_NAMES.workflowResume, { connection, defaultJobOptions }),
       deliverAgentMessage: new Queue(QUEUE_NAMES.deliverAgentMessage, { connection, defaultJobOptions }),
       scheduledTrigger: new Queue(QUEUE_NAMES.scheduledTrigger, { connection, defaultJobOptions: { attempts: 1 } }),

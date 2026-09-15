@@ -1,4 +1,5 @@
 import { startAgentRunWorker } from "./workers/agent-run";
+import { startWorkflowRunWorker } from "./workers/workflow-run";
 import { startWorkflowResumeWorker } from "./workers/workflow-resume";
 import { startDeliverAgentMessageWorker } from "./workers/deliver-agent-message";
 import { startScheduledTriggerWorker } from "./workers/scheduled-trigger";
@@ -7,6 +8,7 @@ import { startIngestKnowledgeDocumentWorker } from "./workers/ingest-knowledge-d
 
 const workers = [
   startAgentRunWorker(),
+  startWorkflowRunWorker(),
   startWorkflowResumeWorker(),
   startDeliverAgentMessageWorker(),
   startScheduledTriggerWorker(),

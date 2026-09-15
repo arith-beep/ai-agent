@@ -45,7 +45,7 @@ export default async function DashboardPage() {
         <StatCard label="Active Agents" value={`${activeAgents}/${agents.length}`} href="/agents" />
         <StatCard label="Workflows" value={workflows.length} href="/workflows" />
         <StatCard label="Open Tasks" value={openTasks} href="/tasks" />
-        <StatCard label="Pending Approvals" value={approvals.length} href="/tasks" />
+        <StatCard label="Pending Approvals" value={approvals.length} href="/approvals" />
         <StatCard label="Recent Runs" value={recentRuns.length} href="/runs" />
         <StatCard label="Failures (recent)" value={failedRuns} href="/runs" />
         <StatCard label="Est. Cost (recent runs)" value={`$${totalCost.toFixed(4)}`} href="/analytics" />

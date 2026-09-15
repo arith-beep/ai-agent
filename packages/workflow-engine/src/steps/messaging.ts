@@ -21,8 +21,15 @@ export const sendMessageStepHandler: NodeHandler = async (node, input, _state, c
 export const createTaskStepHandler: NodeHandler = async (node, input, _state, ctx) => {
   if (node.type !== "create_task") throw new Error("createTaskStepHandler received a non-create_task node");
   const config = node.config as { title: string; description?: string; ownerType: "human" | "agent"; ownerId: string };
-  const createdById = (node.agentId as string | undefined) ?? ctx.agentId;
-  if (!createdById) throw new Error("create_task node requires an agentId (creator) in this run's context.");
+
+  const agentCreatorId = (node.agentId as string | undefined) ?? ctx.agentId;
+  const createdByType: "human" | "agent" = agentCreatorId ? "agent" : "human";
+  const createdById = agentCreatorId ?? (ctx.triggeredByType === "manual" ? ctx.triggeredById : undefined);
+  if (!createdById) {
+    throw new Error(
+      "create_task node has no agent or human to attribute the task to — set an agentId on the node, or trigger this workflow manually.",
+    );
+  }
 
   const task = await createTask({
     orgId: ctx.orgId,
@@ -30,7 +37,7 @@ export const createTaskStepHandler: NodeHandler = async (node, input, _state, ct
     description: config.description,
     ownerType: config.ownerType,
     ownerId: config.ownerId,
-    createdByType: "agent",
+    createdByType,
     createdById,
     priority: "normal",
     dependsOnTaskIds: [],

@@ -97,6 +97,8 @@ export const workflowDefinitionSchema = z.object({
   nodes: z.array(workflowNodeSchema),
   edges: z.array(workflowEdgeSchema),
   entryNodeId: z.string(),
+  /** Canvas positions for the visual builder, keyed by node id. Purely presentational — the execution engine never reads this. */
+  layout: z.record(z.string(), z.object({ x: z.number(), y: z.number() })).optional(),
 });
 export type WorkflowDefinition = z.infer<typeof workflowDefinitionSchema>;
 

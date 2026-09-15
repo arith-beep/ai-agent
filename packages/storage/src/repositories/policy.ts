@@ -22,7 +22,7 @@ export async function createPolicy(input: {
 export async function createApproval(input: {
   orgId: string;
   actionType: string;
-  requestedByType: "agent";
+  requestedByType: "human" | "agent";
   requestedById: string;
   workflowRunId?: string;
   toolExecutionId?: string;

@@ -167,21 +167,59 @@ async function runGraph(
   }
 }
 
+/**
+ * Creates the `workflow_runs` row only — fast enough to call synchronously
+ * from a web request handler, which returns the id immediately (same
+ * contract as an agent run) while a queued job does the actual execution.
+ */
+export async function createWorkflowRunRecord(opts: {
+  workflowId: string;
+  input: unknown;
+  triggeredByType: "manual" | "schedule" | "webhook" | "event" | "agent";
+  triggeredById?: string;
+}): Promise<{ runId: string }> {
+  const run = await workflowsRepo.createWorkflowRun(opts);
+  return { runId: run.id };
+}
+
+/** Executes an already-created (queued-status) workflow run from its entry node. Call from a background worker — this blocks until the run completes or suspends. */
+export async function executeWorkflowRun(
+  runId: string,
+  opts: { orgId: string; definition: WorkflowDefinition; input: unknown; agentId?: string; extraHandlers?: Partial<Record<string, NodeHandler>> },
+): Promise<void> {
+  const { traceId } = await startTrace(opts.orgId, "workflow", runId);
+  await workflowsRepo.setWorkflowRunStatus(runId, "running");
+  const run = await workflowsRepo.getWorkflowRun(runId);
+
+  const ctx: ExecutionContext = {
+    orgId: opts.orgId,
+    workflowRunId: runId,
+    traceId,
+    agentId: opts.agentId,
+    triggeredByType: run?.triggeredByType,
+    triggeredById: run?.triggeredById ?? undefined,
+  };
+  const handlers = { ...defaultHandlers, ...(opts.extraHandlers ?? {}) } as Record<string, NodeHandler>;
+
+  await runGraph(opts.definition, opts.definition.entryNodeId, opts.input, {}, ctx, handlers);
+}
+
+/** Convenience: create + immediately execute, for callers already running in a background worker (e.g. the scheduler) where blocking is fine. */
 export async function startWorkflowRun(opts: StartWorkflowRunOptions): Promise<{ runId: string }> {
-  const run = await workflowsRepo.createWorkflowRun({
+  const { runId } = await createWorkflowRunRecord({
     workflowId: opts.workflowId,
     input: opts.input,
     triggeredByType: opts.triggeredByType,
     triggeredById: opts.triggeredById,
   });
-  const { traceId } = await startTrace(opts.orgId, "workflow", run.id);
-  await workflowsRepo.setWorkflowRunStatus(run.id, "running");
-
-  const ctx: ExecutionContext = { orgId: opts.orgId, workflowRunId: run.id, traceId, agentId: opts.agentId };
-  const handlers = { ...defaultHandlers, ...(opts.extraHandlers ?? {}) } as Record<string, NodeHandler>;
-
-  await runGraph(opts.definition, opts.definition.entryNodeId, opts.input, {}, ctx, handlers);
-  return { runId: run.id };
+  await executeWorkflowRun(runId, {
+    orgId: opts.orgId,
+    definition: opts.definition,
+    input: opts.input,
+    agentId: opts.agentId,
+    extraHandlers: opts.extraHandlers,
+  });
+  return { runId };
 }
 
 export async function resumeWorkflowRun(
@@ -201,7 +239,13 @@ export async function resumeWorkflowRun(
   if (!trace) throw new Error(`Trace for workflow run ${run.id} not found`);
 
   await workflowsRepo.setWorkflowRunStatus(run.id, "running", { snapshot: null });
-  const ctx: ExecutionContext = { orgId: workflow.orgId, workflowRunId: run.id, traceId: trace.id };
+  const ctx: ExecutionContext = {
+    orgId: workflow.orgId,
+    workflowRunId: run.id,
+    traceId: trace.id,
+    triggeredByType: run.triggeredByType,
+    triggeredById: run.triggeredById ?? undefined,
+  };
   const handlers = { ...defaultHandlers, ...(opts?.extraHandlers ?? {}) } as Record<string, NodeHandler>;
 
   const nextEdge = await pickNextEdge(definition, snapshot.currentNodeId, resumePayload, snapshot.state);
