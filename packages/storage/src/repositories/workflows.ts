@@ -51,6 +51,7 @@ export async function createWorkflowRun(input: {
       status: "queued",
     })
     .returning();
+  if (!run) throw new Error("Failed to create workflow run");
   return run;
 }
 

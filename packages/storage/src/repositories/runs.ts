@@ -8,6 +8,7 @@ export async function createAgentRun(input: { agentId: string; threadId?: string
     .insert(schema.agentRuns)
     .values({ agentId: input.agentId, threadId: input.threadId, input: input.input, status: "queued" })
     .returning();
+  if (!run) throw new Error("Failed to create agent run");
   return run;
 }
 

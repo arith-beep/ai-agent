@@ -21,6 +21,7 @@ export async function createTask(input: CreateTaskInput) {
       dependsOnTaskIds: input.dependsOnTaskIds,
     })
     .returning();
+  if (!task) throw new Error("Failed to create task");
   return task;
 }
 

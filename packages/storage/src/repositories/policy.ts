@@ -31,6 +31,7 @@ export async function createApproval(input: {
 }) {
   const db = getDb();
   const [approval] = await db.insert(schema.approvals).values({ ...input, status: "pending" }).returning();
+  if (!approval) throw new Error("Failed to create approval");
   return approval;
 }
 

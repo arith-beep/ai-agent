@@ -46,6 +46,31 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/message-bus:
+    dependencies:
+      '@ai-agent/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@ai-agent/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@ai-agent/tasks':
+        specifier: workspace:*
+        version: link:../tasks
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/model-providers:
     dependencies:
       '@ai-agent/shared-types':
@@ -187,6 +212,22 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/tasks:
+    dependencies:
+      '@ai-agent/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../storage
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/tools:
     dependencies:
       '@ai-agent/crypto':
@@ -201,6 +242,49 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/workflow-engine:
+    dependencies:
+      '@ai-agent/message-bus':
+        specifier: workspace:*
+        version: link:../message-bus
+      '@ai-agent/model-providers':
+        specifier: workspace:*
+        version: link:../model-providers
+      '@ai-agent/observability':
+        specifier: workspace:*
+        version: link:../observability
+      '@ai-agent/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@ai-agent/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@ai-agent/tasks':
+        specifier: workspace:*
+        version: link:../tasks
+      '@ai-agent/tools':
+        specifier: workspace:*
+        version: link:../tools
+      ai:
+        specifier: ^4.1.0
+        version: 4.3.19(react@19.3.0)(zod@3.25.76)
+      jsonata:
+        specifier: ^2.0.6
+        version: 2.2.2
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -1005,6 +1089,10 @@ packages:
   json-schema@0.4.0:
     resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
+  jsonata@2.2.2:
+    resolution: {integrity: sha512-XDFH2PuaAXv0AXJEWwElXbqADmKFGKMLMkFb+qOz0EhjQW2EIJ6pgtordLU+4u3IVERyBfqy6bi6kZKEncvRqA==}
+    engines: {node: '>= 8'}
+
   jsondiffpatch@0.6.0:
     resolution: {integrity: sha512-3QItJOXp2AP1uv7waBkao5nCvhEv+QmJAd38Ybq7wNI74Q+BBmnLn4EDKz6yI9xGAIQoUF87qHt+kc1IVxB4zQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -1716,6 +1804,8 @@ snapshots:
   isexe@3.1.5: {}
 
   json-schema@0.4.0: {}
+
+  jsonata@2.2.2: {}
 
   jsondiffpatch@0.6.0:
     dependencies:

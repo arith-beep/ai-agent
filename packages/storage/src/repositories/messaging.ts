@@ -56,7 +56,13 @@ export async function insertAgentMessage(input: {
       status: "pending",
     })
     .returning();
+  if (!message) throw new Error("Failed to insert agent message");
   return message;
+}
+
+export async function getConversation(conversationId: string) {
+  const db = getDb();
+  return db.query.conversations.findFirst({ where: eq(schema.conversations.id, conversationId) });
 }
 
 export async function getAgentMessage(messageId: string) {
