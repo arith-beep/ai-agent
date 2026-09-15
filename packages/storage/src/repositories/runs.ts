@@ -12,6 +12,11 @@ export async function createAgentRun(input: { agentId: string; threadId?: string
   return run;
 }
 
+export async function linkRunThread(runId: string, threadId: string) {
+  const db = getDb();
+  await db.update(schema.agentRuns).set({ threadId }).where(eq(schema.agentRuns.id, runId));
+}
+
 export async function setAgentRunStatus(runId: string, status: (typeof schema.agentRunStatusEnum.enumValues)[number]) {
   const db = getDb();
   const [updated] = await db.update(schema.agentRuns).set({ status }).where(eq(schema.agentRuns.id, runId)).returning();

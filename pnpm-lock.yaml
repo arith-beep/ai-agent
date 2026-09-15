@@ -15,6 +15,52 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/agent-runtime:
+    dependencies:
+      '@ai-agent/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@ai-agent/message-bus':
+        specifier: workspace:*
+        version: link:../message-bus
+      '@ai-agent/model-providers':
+        specifier: workspace:*
+        version: link:../model-providers
+      '@ai-agent/observability':
+        specifier: workspace:*
+        version: link:../observability
+      '@ai-agent/queue':
+        specifier: workspace:*
+        version: link:../queue
+      '@ai-agent/rag':
+        specifier: workspace:*
+        version: link:../rag
+      '@ai-agent/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      '@ai-agent/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@ai-agent/tasks':
+        specifier: workspace:*
+        version: link:../tasks
+      '@ai-agent/tools':
+        specifier: workspace:*
+        version: link:../tools
+      ai:
+        specifier: ^4.1.0
+        version: 4.3.19(react@19.3.0)(zod@3.25.76)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/crypto:
     devDependencies:
       '@types/node':

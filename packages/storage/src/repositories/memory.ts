@@ -11,6 +11,7 @@ export async function getOrCreateThread(agentId: string, opts: { userId?: string
     .insert(schema.memoryThreads)
     .values({ agentId, userId: opts.userId, resourceId: opts.resourceId })
     .returning();
+  if (!thread) throw new Error("Failed to create memory thread");
   return thread;
 }
 
