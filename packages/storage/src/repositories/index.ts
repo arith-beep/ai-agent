@@ -11,3 +11,4 @@ export * as policyRepo from "./policy";
 export * as schedulingRepo from "./scheduling";
 export * as credentialsRepo from "./credentials";
 export * as auditRepo from "./audit";
+export * as salesRepo from "./sales";

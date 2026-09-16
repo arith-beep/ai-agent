@@ -12,6 +12,8 @@ export interface ExecuteToolParams {
   agentId?: string;
   runId?: string;
   spanId?: string;
+  /** Set when executing inside a Sales Agent conversation turn — forwarded to the builtin's ToolContext. */
+  conversationId?: string;
   input: unknown;
 }
 
@@ -30,7 +32,7 @@ export async function executeTool(params: ExecuteToolParams): Promise<ToolExecut
       const impl = getBuiltinTool(tool.builtinKey);
       if (!impl) throw new Error(`No implementation registered for builtin tool key "${tool.builtinKey}".`);
       const parsedInput = impl.inputSchema.parse(params.input);
-      output = await impl.execute(parsedInput, { orgId: params.orgId, agentId: params.agentId, authConfig });
+      output = await impl.execute(parsedInput, { orgId: params.orgId, agentId: params.agentId, authConfig, conversationId: params.conversationId });
     } else if (tool.executionConfig) {
       const config = customToolExecutionConfigSchema.parse(tool.executionConfig);
       const parsedInput = validateAgainstFlatJsonSchema(tool.inputSchema, params.input);

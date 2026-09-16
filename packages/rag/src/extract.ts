@@ -26,6 +26,13 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   }
 }
 
+/** Extracts plain text from an already-in-memory PDF buffer (e.g. a direct file upload with no URL to fetch). */
+export async function extractPdfBuffer(buffer: Buffer): Promise<string> {
+  const pdfParse = (await import("pdf-parse")).default;
+  const data = await pdfParse(buffer);
+  return data.text;
+}
+
 /** Extracts plain text from a document source, ready for chunking. */
 export async function extractText(sourceType: KnowledgeSourceType, sourceUri: string): Promise<string> {
   switch (sourceType) {
