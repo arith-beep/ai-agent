@@ -33,6 +33,8 @@ export const tools = pgTable("tools", {
   requiresApproval: boolean("requires_approval").notNull().default(false),
   authConfigEncrypted: bytea("auth_config_encrypted"),
   builtinKey: text("builtin_key"),
+  /** Present only for org-defined custom tools (builtinKey null) — see @ai-agent/tools's custom-http executor. */
+  executionConfig: jsonb("execution_config").$type<Record<string, unknown>>(),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),
