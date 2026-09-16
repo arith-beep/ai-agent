@@ -147,7 +147,13 @@ async function runGraph(
       const message = error instanceof Error ? error.message : String(error);
       await workflowsRepo.setWorkflowRunStatus(ctx.workflowRunId, "failed", { errorMessage: message });
       await completeTrace(ctx.traceId, "error");
-      throw error;
+      // Deliberately not rethrown: the failure is now durably recorded as the
+      // run's terminal state. There's no partial-resume-from-node capability,
+      // so a BullMQ retry would just replay every node from the entry point
+      // again — including any side-effecting ones (create_task, send_message,
+      // tool calls) that already ran, duplicating their effects. Matches how
+      // @ai-agent/agent-runtime's executeAgentRun swallows its own failures.
+      return;
     }
 
     if (result.type === "suspend") {
