@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { ParticipantRef, MessageKind, MessagePriority } from "@ai-agent/shared-types";
 import { getDb, schema } from "../db";
 
@@ -113,6 +113,61 @@ export async function listMessagesForConversation(conversationId: string) {
     where: eq(schema.agentMessages.conversationId, conversationId),
     orderBy: (m, { asc }) => [asc(m.createdAt)],
   });
+}
+
+export async function getConversationParticipants(conversationId: string) {
+  const db = getDb();
+  return db.query.conversationParticipants.findMany({ where: eq(schema.conversationParticipants.conversationId, conversationId) });
+}
+
+export interface ConversationSummary {
+  conversation: typeof schema.conversations.$inferSelect;
+  participants: (typeof schema.conversationParticipants.$inferSelect)[];
+  messageCount: number;
+  latestMessage: typeof schema.agentMessages.$inferSelect | undefined;
+}
+
+/** Every conversation in the org, newest-activity-first, with its participants and latest message — the data behind the Conversations page. */
+export async function listConversationsForOrg(orgId: string, limit = 100): Promise<ConversationSummary[]> {
+  const db = getDb();
+  const conversations = await db.query.conversations.findMany({
+    where: eq(schema.conversations.orgId, orgId),
+    orderBy: (c, { desc: d }) => [d(c.createdAt)],
+    limit,
+  });
+  if (conversations.length === 0) return [];
+  const conversationIds = conversations.map((c) => c.id);
+
+  const [participants, messages] = await Promise.all([
+    db.query.conversationParticipants.findMany({ where: inArray(schema.conversationParticipants.conversationId, conversationIds) }),
+    db.query.agentMessages.findMany({
+      where: inArray(schema.agentMessages.conversationId, conversationIds),
+      orderBy: (m, { desc: d }) => [d(m.createdAt)],
+    }),
+  ]);
+
+  const participantsByConv = new Map<string, (typeof participants)[number][]>();
+  for (const p of participants) participantsByConv.set(p.conversationId, [...(participantsByConv.get(p.conversationId) ?? []), p]);
+
+  const latestByConv = new Map<string, (typeof messages)[number]>();
+  const countByConv = new Map<string, number>();
+  for (const m of messages) {
+    if (!latestByConv.has(m.conversationId)) latestByConv.set(m.conversationId, m);
+    countByConv.set(m.conversationId, (countByConv.get(m.conversationId) ?? 0) + 1);
+  }
+
+  return conversations
+    .map((conversation) => ({
+      conversation,
+      participants: participantsByConv.get(conversation.id) ?? [],
+      messageCount: countByConv.get(conversation.id) ?? 0,
+      latestMessage: latestByConv.get(conversation.id),
+    }))
+    .sort((a, b) => {
+      const aTime = a.latestMessage?.createdAt.getTime() ?? a.conversation.createdAt.getTime();
+      const bTime = b.latestMessage?.createdAt.getTime() ?? b.conversation.createdAt.getTime();
+      return bTime - aTime;
+    });
 }
 
 export async function listMessagesForRecipient(toType: "human" | "agent", toId: string) {

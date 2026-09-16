@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/models", label: "Models" },
   { href: "/tasks", label: "Tasks" },
   { href: "/messages", label: "Messages" },
+  { href: "/conversations", label: "Conversations" },
   { href: "/approvals", label: "Approvals" },
   { href: "/schedules", label: "Schedules" },
   { href: "/runs", label: "Runs" },
