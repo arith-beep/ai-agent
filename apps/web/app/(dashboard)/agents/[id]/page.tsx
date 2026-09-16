@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireCurrentContext } from "@/lib/session";
-import { agentsRepo, toolsRepo, knowledgeRepo, runsRepo } from "@ai-agent/storage";
+import { agentsRepo, toolsRepo, knowledgeRepo, runsRepo, tenancyRepo } from "@ai-agent/storage";
 import { AgentForm } from "../_components/agent-form";
 import { AgentActions } from "../_components/agent-actions";
 import { AgentConnections } from "../_components/agent-connections";
@@ -19,12 +19,13 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   const config = await agentsRepo.getAgentRuntimeConfig(ctx.orgId, id);
   if (!config) notFound();
 
-  const [allTools, allKbs, allAgents, connections, runs] = await Promise.all([
+  const [allTools, allKbs, allAgents, connections, runs, orgMembers] = await Promise.all([
     toolsRepo.listTools(ctx.orgId),
     knowledgeRepo.listKnowledgeBases(ctx.orgId),
     agentsRepo.listAgents(ctx.orgId),
     agentsRepo.listConnections(id),
     runsRepo.listRunsForAgent(id, 10),
+    tenancyRepo.listOrgMembers(ctx.orgId),
   ]);
 
   const { agent } = config;
@@ -91,9 +92,11 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               requiresApproval: p.requiresApproval,
               approverRole: p.approverRole ?? undefined,
             })),
+            humanManagerId: agent.humanManagerId ?? undefined,
           }}
           tools={allTools}
           knowledgeBases={allKbs}
+          orgMembers={orgMembers}
         />
       </div>
     </div>

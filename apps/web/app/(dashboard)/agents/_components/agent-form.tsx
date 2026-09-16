@@ -12,6 +12,11 @@ export interface KnowledgeBaseOption {
   id: string;
   name: string;
 }
+export interface OrgMemberOption {
+  userId: string;
+  name: string | null;
+  email: string;
+}
 export interface AgentPermission {
   actionPattern: string;
   requiresApproval: boolean;
@@ -32,6 +37,7 @@ export interface AgentFormInitial {
   toolIds?: string[];
   knowledgeBaseIds?: string[];
   permissions?: AgentPermission[];
+  humanManagerId?: string;
 }
 
 const ROLES = ["owner", "admin", "manager", "member", "viewer"] as const;
@@ -46,10 +52,12 @@ export function AgentForm({
   initial,
   tools,
   knowledgeBases,
+  orgMembers,
 }: {
   initial?: AgentFormInitial;
   tools: ToolOption[];
   knowledgeBases: KnowledgeBaseOption[];
+  orgMembers: OrgMemberOption[];
 }) {
   const router = useRouter();
   const isEdit = Boolean(initial?.id);
@@ -66,6 +74,7 @@ export function AgentForm({
   const [toolIds, setToolIds] = useState<string[]>(initial?.toolIds ?? []);
   const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>(initial?.knowledgeBaseIds ?? []);
   const [permissions, setPermissions] = useState<AgentPermission[]>(initial?.permissions ?? []);
+  const [humanManagerId, setHumanManagerId] = useState(initial?.humanManagerId ?? "");
   const [newPattern, setNewPattern] = useState("");
   const [newApproverRole, setNewApproverRole] = useState<(typeof ROLES)[number] | "">("manager");
   const [submitting, setSubmitting] = useState(false);
@@ -100,6 +109,7 @@ export function AgentForm({
       toolIds,
       knowledgeBaseIds,
       permissions,
+      humanManagerId: humanManagerId || undefined,
     };
 
     const url = isEdit ? `/api/agents/${initial?.id}` : "/api/agents";
@@ -144,6 +154,20 @@ export function AgentForm({
         <div>
           <label className="label">Objective</label>
           <textarea className="input" rows={2} value={objective} onChange={(e) => setObjective(e.target.value)} />
+        </div>
+        <div>
+          <label className="label">Human manager</label>
+          <select className="input" value={humanManagerId} onChange={(e) => setHumanManagerId(e.target.value)}>
+            <option value="">None</option>
+            {orgMembers.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name ?? m.email} ({m.email})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-ink-faint">
+            Who this agent&apos;s notifications and escalations go to — summaries, and failed-delivery alerts when it can&apos;t reach another agent.
+          </p>
         </div>
       </div>
 
