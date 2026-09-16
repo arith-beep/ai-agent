@@ -12,7 +12,15 @@ export function startEmbedMemoryWorker(): Worker<EmbedMemoryJobData> {
       if (!message || !orgId) return; // message or thread was deleted since enqueue — nothing to embed
       const text = typeof message.content === "string" ? message.content : JSON.stringify(message.content);
       if (text.trim().length === 0) return;
-      await embedPendingMessage(threadId, messageId, orgId, text);
+      try {
+        await embedPendingMessage(threadId, messageId, orgId, text);
+      } catch (error) {
+        // Embedding is explicitly best-effort (semantic recall, tier 3) — the message itself is
+        // already durably stored (tier 1) regardless. Swallowing here, rather than letting BullMQ
+        // retry, matters most for a missing-API-key org: that failure is permanent, so retrying
+        // would just repeat it 5x with exponential backoff on every single message, forever.
+        console.error(`[embed-memory] failed to embed message ${messageId}:`, error instanceof Error ? error.message : error);
+      }
     },
     { connection: getRedisConnection(), concurrency: 5 },
   );
