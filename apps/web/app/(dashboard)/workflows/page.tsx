@@ -14,7 +14,12 @@ export default async function WorkflowsPage() {
           <h1 className="text-xl font-semibold text-ink">Workflows</h1>
           <p className="mt-1 text-sm text-ink-muted">Trigger → Agent → Condition → Tool → Action, visually.</p>
         </div>
-        <CreateWorkflowButton />
+        <div className="flex items-center gap-2">
+          <Link href="/workflows/runs" className="btn-secondary">
+            All runs
+          </Link>
+          <CreateWorkflowButton />
+        </div>
       </div>
 
       {workflows.length === 0 ? (

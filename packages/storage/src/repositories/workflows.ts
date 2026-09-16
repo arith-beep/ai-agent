@@ -1,4 +1,4 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, gte, count, sql } from "drizzle-orm";
 import type { WorkflowDefinition, WorkflowSnapshot } from "@ai-agent/shared-types";
 import { getDb, schema } from "../db";
 
@@ -82,7 +82,7 @@ export async function listWorkflowRuns(workflowId: string, limit = 50) {
 
 export async function listWorkflowRunsForOrg(
   orgId: string,
-  options?: { statuses?: (typeof schema.workflowRunStatusEnum.enumValues)[number][]; limit?: number },
+  options?: { statuses?: (typeof schema.workflowRunStatusEnum.enumValues)[number][]; workflowId?: string; limit?: number },
 ) {
   const db = getDb();
   const orgWorkflows = await db.query.workflows.findMany({
@@ -90,7 +90,8 @@ export async function listWorkflowRunsForOrg(
     columns: { id: true, name: true },
   });
   if (orgWorkflows.length === 0) return [];
-  const workflowIds = orgWorkflows.map((w) => w.id);
+  const workflowIds = options?.workflowId ? orgWorkflows.map((w) => w.id).filter((id) => id === options.workflowId) : orgWorkflows.map((w) => w.id);
+  if (workflowIds.length === 0) return [];
   const nameById = new Map(orgWorkflows.map((w) => [w.id, w.name]));
 
   const conditions = [inArray(schema.workflowRuns.workflowId, workflowIds)];
@@ -109,6 +110,65 @@ export async function listWorkflowRunsForOrg(
     workflowId: run.workflowId,
     workflowName: nameById.get(run.workflowId) ?? "Unknown workflow",
   }));
+}
+
+export interface WorkflowRunStats {
+  byStatus: { status: string; count: number }[];
+  byDay: { day: string; status: string; count: number }[];
+  byWorkflow: { workflowId: string; workflowName: string; count: number; completedCount: number; failedCount: number; avgDurationMs: number | null }[];
+}
+
+/** Real aggregate queries over workflow_runs for the Analytics dashboard. */
+export async function getWorkflowRunStatsForOrg(orgId: string, since: Date): Promise<WorkflowRunStats> {
+  const db = getDb();
+  const scope = and(eq(schema.workflows.orgId, orgId), gte(schema.workflowRuns.startedAt, since));
+
+  const byStatusRows = await db
+    .select({ status: schema.workflowRuns.status, count: count() })
+    .from(schema.workflowRuns)
+    .innerJoin(schema.workflows, eq(schema.workflows.id, schema.workflowRuns.workflowId))
+    .where(scope)
+    .groupBy(schema.workflowRuns.status);
+
+  const byDayRows = await db
+    .select({
+      day: sql<string>`to_char(date_trunc('day', ${schema.workflowRuns.startedAt}), 'YYYY-MM-DD')`,
+      status: schema.workflowRuns.status,
+      count: count(),
+    })
+    .from(schema.workflowRuns)
+    .innerJoin(schema.workflows, eq(schema.workflows.id, schema.workflowRuns.workflowId))
+    .where(scope)
+    .groupBy(sql`date_trunc('day', ${schema.workflowRuns.startedAt})`, schema.workflowRuns.status)
+    .orderBy(sql`date_trunc('day', ${schema.workflowRuns.startedAt})`);
+
+  const byWorkflowRows = await db
+    .select({
+      workflowId: schema.workflows.id,
+      workflowName: schema.workflows.name,
+      count: count(),
+      completedCount: sql<string>`count(*) filter (where ${schema.workflowRuns.status} = 'completed')`,
+      failedCount: sql<string>`count(*) filter (where ${schema.workflowRuns.status} = 'failed')`,
+      avgDurationMs: sql<string | null>`avg(extract(epoch from (${schema.workflowRuns.completedAt} - ${schema.workflowRuns.startedAt})) * 1000)`,
+    })
+    .from(schema.workflowRuns)
+    .innerJoin(schema.workflows, eq(schema.workflows.id, schema.workflowRuns.workflowId))
+    .where(scope)
+    .groupBy(schema.workflows.id, schema.workflows.name)
+    .orderBy(sql`count(*) desc`);
+
+  return {
+    byStatus: byStatusRows,
+    byDay: byDayRows,
+    byWorkflow: byWorkflowRows.map((r) => ({
+      workflowId: r.workflowId,
+      workflowName: r.workflowName,
+      count: r.count,
+      completedCount: Number(r.completedCount),
+      failedCount: Number(r.failedCount),
+      avgDurationMs: r.avgDurationMs ? Number(r.avgDurationMs) : null,
+    })),
+  };
 }
 
 export async function getWorkflowRun(runId: string) {

@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, count, sql } from "drizzle-orm";
 import type { TokenUsage } from "@ai-agent/shared-types";
 import { getDb, schema } from "../db";
 
@@ -57,15 +57,91 @@ export async function listRunsForAgent(agentId: string, limit = 50) {
   });
 }
 
-export async function listRunsForOrg(orgId: string, limit = 100) {
+export async function listRunsForOrg(
+  orgId: string,
+  limit = 100,
+  filters?: { status?: (typeof schema.agentRunStatusEnum.enumValues)[number]; agentId?: string },
+) {
   const db = getDb();
+  const conditions = [eq(schema.agents.orgId, orgId)];
+  if (filters?.status) conditions.push(eq(schema.agentRuns.status, filters.status));
+  if (filters?.agentId) conditions.push(eq(schema.agentRuns.agentId, filters.agentId));
   return db
     .select({ run: schema.agentRuns, agentName: schema.agents.name })
     .from(schema.agentRuns)
     .innerJoin(schema.agents, eq(schema.agents.id, schema.agentRuns.agentId))
-    .where(eq(schema.agents.orgId, orgId))
+    .where(and(...conditions))
     .orderBy(desc(schema.agentRuns.startedAt))
     .limit(limit);
+}
+
+export interface AgentRunStats {
+  byStatus: { status: string; count: number }[];
+  byDay: { day: string; status: string; count: number }[];
+  byModel: { provider: string; model: string; count: number; totalCost: number; totalTokens: number }[];
+  totals: { count: number; totalCost: number; totalTokens: number; avgDurationMs: number | null };
+}
+
+/** Real aggregate queries over agent_runs for the Analytics dashboard — nothing here is synthesized. */
+export async function getAgentRunStatsForOrg(orgId: string, since: Date): Promise<AgentRunStats> {
+  const db = getDb();
+  const scope = and(eq(schema.agents.orgId, orgId), gte(schema.agentRuns.startedAt, since));
+
+  const byStatusRows = await db
+    .select({ status: schema.agentRuns.status, count: count() })
+    .from(schema.agentRuns)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.agentRuns.agentId))
+    .where(scope)
+    .groupBy(schema.agentRuns.status);
+
+  const byDayRows = await db
+    .select({
+      day: sql<string>`to_char(date_trunc('day', ${schema.agentRuns.startedAt}), 'YYYY-MM-DD')`,
+      status: schema.agentRuns.status,
+      count: count(),
+    })
+    .from(schema.agentRuns)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.agentRuns.agentId))
+    .where(scope)
+    .groupBy(sql`date_trunc('day', ${schema.agentRuns.startedAt})`, schema.agentRuns.status)
+    .orderBy(sql`date_trunc('day', ${schema.agentRuns.startedAt})`);
+
+  const byModelRows = await db
+    .select({
+      provider: schema.agents.modelProvider,
+      model: schema.agents.modelName,
+      count: count(),
+      totalCost: sql<string>`coalesce(sum(${schema.agentRuns.estimatedCost}), 0)`,
+      totalTokens: sql<string>`coalesce(sum((${schema.agentRuns.tokenUsage}->>'totalTokens')::int), 0)`,
+    })
+    .from(schema.agentRuns)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.agentRuns.agentId))
+    .where(scope)
+    .groupBy(schema.agents.modelProvider, schema.agents.modelName)
+    .orderBy(sql`sum(${schema.agentRuns.estimatedCost}) desc`);
+
+  const [totalsRow] = await db
+    .select({
+      count: count(),
+      totalCost: sql<string>`coalesce(sum(${schema.agentRuns.estimatedCost}), 0)`,
+      totalTokens: sql<string>`coalesce(sum((${schema.agentRuns.tokenUsage}->>'totalTokens')::int), 0)`,
+      avgDurationMs: sql<string | null>`avg(extract(epoch from (${schema.agentRuns.completedAt} - ${schema.agentRuns.startedAt})) * 1000)`,
+    })
+    .from(schema.agentRuns)
+    .innerJoin(schema.agents, eq(schema.agents.id, schema.agentRuns.agentId))
+    .where(scope);
+
+  return {
+    byStatus: byStatusRows,
+    byDay: byDayRows,
+    byModel: byModelRows.map((r) => ({ provider: r.provider, model: r.model, count: r.count, totalCost: Number(r.totalCost), totalTokens: Number(r.totalTokens) })),
+    totals: {
+      count: totalsRow?.count ?? 0,
+      totalCost: Number(totalsRow?.totalCost ?? 0),
+      totalTokens: Number(totalsRow?.totalTokens ?? 0),
+      avgDurationMs: totalsRow?.avgDurationMs ? Number(totalsRow.avgDurationMs) : null,
+    },
+  };
 }
 
 export async function createTrace(orgId: string, runType: "agent" | "workflow", runId: string) {

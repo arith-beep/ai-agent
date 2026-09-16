@@ -127,6 +127,10 @@ export function AgentForm({
     }
 
     const data = await res.json();
+    setSubmitting(false);
+    // A create navigates to a new URL and the page remounts; an edit's URL is unchanged, so
+    // nothing else would reset `submitting` back to false and the button would stay stuck on
+    // "Saving...". router.refresh() alone re-fetches the server data either way.
     router.push(`/agents/${data.agent.id}`);
     router.refresh();
   }
