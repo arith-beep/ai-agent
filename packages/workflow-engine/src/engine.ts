@@ -1,5 +1,6 @@
-import { workflowsRepo } from "@ai-agent/storage";
+import { workflowsRepo, toolsRepo, policyRepo } from "@ai-agent/storage";
 import { startTrace, completeTrace, startSpan, completeSpan, getTraceForRun } from "@ai-agent/observability";
+import { executeTool } from "@ai-agent/tools";
 import type { WorkflowDefinition, WorkflowNode, WorkflowSnapshot } from "@ai-agent/shared-types";
 import type { ExecutionContext, NodeHandler, StepResult } from "./types";
 import { evaluateCondition } from "./steps/expression";
@@ -228,6 +229,49 @@ export async function startWorkflowRun(opts: StartWorkflowRunOptions): Promise<{
   return { runId };
 }
 
+/**
+ * A `tool` node suspends *before* calling the tool (see steps/tool.ts) when
+ * the action needs approval — unlike the dedicated `approval` node type,
+ * whose entire job is just gating progression, a suspended tool node still
+ * owes the platform an actual tool call once approved. Resuming it has to
+ * perform that call now, using the original input recorded on the approval
+ * row (`snapshot.pendingResumeKey` is that approval's id), not just forward
+ * the `{approved, note}` resume payload downstream as if it were the node's
+ * real output.
+ */
+async function resumeApprovedToolNode(node: WorkflowNode, resumePayload: unknown, pendingResumeKey: string | undefined, ctx: ExecutionContext): Promise<unknown> {
+  const decision = resumePayload as { approved?: boolean; note?: string } | undefined;
+  if (!decision?.approved) {
+    return { approved: false, note: decision?.note };
+  }
+  if (!pendingResumeKey) throw new Error(`Tool node "${node.id}" resumed without a recorded approval to execute.`);
+
+  const approval = await policyRepo.getApproval(pendingResumeKey);
+  if (!approval) throw new Error(`Approval ${pendingResumeKey} not found for tool node "${node.id}".`);
+
+  const payload = approval.payload as { toolId?: string; input?: unknown };
+  const toolId = (node.toolId as string | undefined) ?? payload.toolId;
+  if (!toolId) throw new Error(`Tool node "${node.id}" has no toolId to execute after approval.`);
+  const tool = await toolsRepo.getToolById(ctx.orgId, toolId);
+  if (!tool) throw new Error(`Tool ${toolId} not found`);
+
+  const span = await startSpan({ traceId: ctx.traceId, type: "workflow_step", name: `tool:${node.id} (post-approval)`, input: payload.input });
+  await workflowsRepo.recordStepRun({ workflowRunId: ctx.workflowRunId, stepId: node.id, stepType: "tool", status: "running", input: payload.input });
+
+  const nodeAgentId = node.agentId as string | undefined;
+  const result = await executeTool({ tool, orgId: ctx.orgId, agentId: nodeAgentId ?? ctx.agentId, input: payload.input });
+
+  if (result.status === "error") {
+    await completeSpan(span.id, { status: "error", errorMessage: result.errorMessage });
+    await workflowsRepo.recordStepRun({ workflowRunId: ctx.workflowRunId, stepId: node.id, stepType: "tool", status: "failed", input: payload.input, errorMessage: result.errorMessage });
+    throw new Error(result.errorMessage ?? "Tool execution failed");
+  }
+
+  await completeSpan(span.id, { status: "success", output: result.output });
+  await workflowsRepo.recordStepRun({ workflowRunId: ctx.workflowRunId, stepId: node.id, stepType: "tool", status: "completed", input: payload.input, output: result.output });
+  return result.output;
+}
+
 export async function resumeWorkflowRun(
   workflowRunId: string,
   resumePayload: unknown,
@@ -254,11 +298,24 @@ export async function resumeWorkflowRun(
   };
   const handlers = { ...defaultHandlers, ...(opts?.extraHandlers ?? {}) } as Record<string, NodeHandler>;
 
-  const nextEdge = await pickNextEdge(definition, snapshot.currentNodeId, resumePayload, snapshot.state);
+  const suspendedNode = findNode(definition, snapshot.currentNodeId);
+  let resumedOutput = resumePayload;
+  if (suspendedNode.type === "tool") {
+    try {
+      resumedOutput = await resumeApprovedToolNode(suspendedNode, resumePayload, snapshot.pendingResumeKey, ctx);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await workflowsRepo.setWorkflowRunStatus(ctx.workflowRunId, "failed", { errorMessage: message });
+      await completeTrace(ctx.traceId, "error");
+      return;
+    }
+  }
+
+  const nextEdge = await pickNextEdge(definition, snapshot.currentNodeId, resumedOutput, snapshot.state);
   if (!nextEdge) {
-    await workflowsRepo.setWorkflowRunStatus(run.id, "completed", { output: resumePayload });
+    await workflowsRepo.setWorkflowRunStatus(run.id, "completed", { output: resumedOutput });
     await completeTrace(ctx.traceId, "success");
     return;
   }
-  await runGraph(definition, nextEdge.to, resumePayload, snapshot.state, ctx, handlers);
+  await runGraph(definition, nextEdge.to, resumedOutput, snapshot.state, ctx, handlers);
 }
