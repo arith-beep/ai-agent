@@ -6,6 +6,11 @@ import type { TaskMessagePayload, ResponseMessagePayload } from "./payload-types
 export async function deliverMessage(messageId: string): Promise<void> {
   const message = await messagingRepo.getAgentMessage(messageId);
   if (!message) throw new Error(`Agent message ${messageId} not found`);
+  // A prior attempt may have created the task/agent-run and enqueued the follow-up job, then
+  // died (worker restart, dropped connection) before BullMQ recorded the job as complete —
+  // redoing this work on retry would duplicate that task/run/job. Once processed, delivery is
+  // done regardless of why we were asked to run it again.
+  if (message.status === "processed") return;
 
   const conversation = await messagingRepo.getConversation(message.conversationId);
   if (!conversation) throw new Error(`Conversation ${message.conversationId} not found`);
