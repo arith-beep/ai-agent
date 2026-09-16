@@ -16,7 +16,7 @@ export function SeedToolsButton() {
 
   return (
     <button className="btn-primary" onClick={seed} disabled={busy}>
-      {busy ? "Seeding..." : "Seed built-in tools"}
+      {busy ? "Syncing..." : "Sync built-in tools"}
     </button>
   );
 }

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { WorkflowDefinition, WorkflowSnapshot } from "@ai-agent/shared-types";
 import { getDb, schema } from "../db";
 
@@ -78,6 +78,37 @@ export async function listWorkflowRuns(workflowId: string, limit = 50) {
     orderBy: (r, { desc }) => [desc(r.startedAt)],
     limit,
   });
+}
+
+export async function listWorkflowRunsForOrg(
+  orgId: string,
+  options?: { statuses?: (typeof schema.workflowRunStatusEnum.enumValues)[number][]; limit?: number },
+) {
+  const db = getDb();
+  const orgWorkflows = await db.query.workflows.findMany({
+    where: eq(schema.workflows.orgId, orgId),
+    columns: { id: true, name: true },
+  });
+  if (orgWorkflows.length === 0) return [];
+  const workflowIds = orgWorkflows.map((w) => w.id);
+  const nameById = new Map(orgWorkflows.map((w) => [w.id, w.name]));
+
+  const conditions = [inArray(schema.workflowRuns.workflowId, workflowIds)];
+  if (options?.statuses && options.statuses.length > 0) {
+    conditions.push(inArray(schema.workflowRuns.status, options.statuses));
+  }
+
+  const runs = await db.query.workflowRuns.findMany({
+    where: and(...conditions),
+    orderBy: (r, { desc: descOrder }) => [descOrder(r.startedAt)],
+    limit: options?.limit ?? 50,
+  });
+
+  return runs.map((run) => ({
+    run,
+    workflowId: run.workflowId,
+    workflowName: nameById.get(run.workflowId) ?? "Unknown workflow",
+  }));
 }
 
 export async function getWorkflowRun(runId: string) {

@@ -20,6 +20,9 @@ importers:
       '@ai-agent/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@ai-agent/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
       '@ai-agent/message-bus':
         specifier: workspace:*
         version: link:../../packages/message-bus
@@ -454,6 +457,9 @@ importers:
       '@ai-agent/storage':
         specifier: workspace:*
         version: link:../storage
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
       zod:
         specifier: ^3.24.1
         version: 3.25.76

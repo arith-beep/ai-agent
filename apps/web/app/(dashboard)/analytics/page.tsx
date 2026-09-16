@@ -1,9 +1,15 @@
+import Link from "next/link";
 import { requireCurrentContext } from "@/lib/session";
-import { runsRepo } from "@ai-agent/storage";
+import { runsRepo, policyRepo, workflowsRepo } from "@ai-agent/storage";
 
 export default async function AnalyticsPage() {
   const ctx = await requireCurrentContext();
-  const runs = await runsRepo.listRunsForOrg(ctx.orgId, 500);
+  const [runs, pendingApprovals, activeWorkflowRuns, recentWorkflowRuns] = await Promise.all([
+    runsRepo.listRunsForOrg(ctx.orgId, 500),
+    policyRepo.listPendingApprovals(ctx.orgId),
+    workflowsRepo.listWorkflowRunsForOrg(ctx.orgId, { statuses: ["running", "suspended", "queued"], limit: 200 }),
+    workflowsRepo.listWorkflowRunsForOrg(ctx.orgId, { limit: 200 }),
+  ]);
 
   const byStatus: Record<string, number> = {};
   let totalCost = 0;
@@ -19,6 +25,32 @@ export default async function AnalyticsPage() {
     entry.cost += Number(run.estimatedCost ?? 0);
     byAgent.set(agentName, entry);
   }
+
+  const recentFailedAgentRuns = runs
+    .filter(({ run }) => run.status === "failed")
+    .slice(0, 10)
+    .map(({ run, agentName }) => ({
+      id: run.id,
+      label: `Agent: ${agentName}`,
+      href: `/runs/${run.id}`,
+      message: run.errorMessage ?? "Unknown error",
+      at: run.startedAt,
+    }));
+
+  const recentFailedWorkflowRuns = recentWorkflowRuns
+    .filter(({ run }) => run.status === "failed")
+    .slice(0, 10)
+    .map(({ run, workflowId, workflowName }) => ({
+      id: run.id,
+      label: `Workflow: ${workflowName}`,
+      href: `/workflows/${workflowId}/runs/${run.id}`,
+      message: run.errorMessage ?? "Unknown error",
+      at: run.startedAt,
+    }));
+
+  const recentFailures = [...recentFailedAgentRuns, ...recentFailedWorkflowRuns]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -39,6 +71,35 @@ export default async function AnalyticsPage() {
         <div className="card p-4">
           <div className="text-xs text-ink-faint">Total est. cost</div>
           <div className="mt-1 text-xl font-semibold text-ink">${totalCost.toFixed(4)}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Link href="/approvals" className="card p-4 transition hover:bg-surface-raised">
+          <div className="text-xs text-ink-faint">Pending approvals</div>
+          <div className={`mt-1 text-xl font-semibold ${pendingApprovals.length > 0 ? "text-warning" : "text-ink"}`}>{pendingApprovals.length}</div>
+        </Link>
+        <Link href="/workflows" className="card p-4 transition hover:bg-surface-raised">
+          <div className="text-xs text-ink-faint">Active workflow runs</div>
+          <div className="mt-1 text-xl font-semibold text-ink">{activeWorkflowRuns.length}</div>
+        </Link>
+      </div>
+
+      <div className="card">
+        <div className="border-b border-border px-5 py-3 text-sm font-medium text-ink">Recent failures</div>
+        <div className="divide-y divide-border-subtle">
+          {recentFailures.length === 0 && <div className="px-5 py-6 text-sm text-ink-faint">No failures among recent runs.</div>}
+          {recentFailures.map((failure) => (
+            <Link key={failure.id} href={failure.href} className="block px-5 py-3 text-sm hover:bg-surface-raised">
+              <div className="flex items-center justify-between">
+                <span className="text-ink">{failure.label}</span>
+                <span className="text-xs text-ink-faint">{new Date(failure.at).toLocaleString()}</span>
+              </div>
+              <div className="mt-0.5 truncate text-xs text-danger" title={failure.message}>
+                {failure.message}
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
 

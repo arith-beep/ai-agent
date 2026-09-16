@@ -32,6 +32,16 @@ export async function getToolById(orgId: string, toolId: string) {
   return db.query.tools.findFirst({ where: and(eq(schema.tools.id, toolId), eq(schema.tools.orgId, orgId)) });
 }
 
+export async function setToolAuthConfig(orgId: string, toolId: string, encrypted: Buffer) {
+  const db = getDb();
+  const [tool] = await db
+    .update(schema.tools)
+    .set({ authConfigEncrypted: encrypted })
+    .where(and(eq(schema.tools.id, toolId), eq(schema.tools.orgId, orgId)))
+    .returning();
+  return tool;
+}
+
 export async function deleteTool(orgId: string, toolId: string) {
   const db = getDb();
   await db.delete(schema.tools).where(and(eq(schema.tools.id, toolId), eq(schema.tools.orgId, orgId)));
