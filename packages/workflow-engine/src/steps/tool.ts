@@ -5,10 +5,12 @@ import type { NodeHandler } from "../types";
 
 /**
  * Executes a `tool` node. Approval gating reuses the same suspend mechanism
- * as every other suspend point in the engine (docs/architecture/06):
- * ephemeral nodes built by the Agent Runtime can set `requiresApproval` and
- * `agentId` directly on the node (see @ai-agent/agent-runtime), since those
- * are runtime-only fields not part of the persisted WorkflowDefinition.
+ * as every other suspend point in the engine (docs/architecture/06).
+ * `agentId` attributes the call to a specific business agent — either set by
+ * a workflow author (e.g. a KPI-monitoring workflow that acts as a named
+ * agent) or by the ephemeral agent-loop workflow the Agent Runtime builds
+ * per run (see @ai-agent/agent-runtime), which also sets `requiresApproval`
+ * directly on the node since that field is runtime-only, not persisted.
  */
 export const toolStepHandler: NodeHandler = async (node, input, _state, ctx) => {
   if (node.type !== "tool") throw new Error("toolStepHandler received a non-tool node");

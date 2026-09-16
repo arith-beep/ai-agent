@@ -19,7 +19,7 @@ export const workflowNodeSchema: z.ZodType<WorkflowNode> = z.lazy(() =>
       model: z.object({ provider: z.string(), model: z.string() }),
       prompt: z.string(),
     }),
-    baseNode.extend({ type: z.literal("tool"), toolId: z.string().uuid(), inputMapping: jsonPathMapSchema.optional() }),
+    baseNode.extend({ type: z.literal("tool"), toolId: z.string().uuid(), agentId: z.string().uuid().optional(), inputMapping: jsonPathMapSchema.optional() }),
     baseNode.extend({
       type: z.literal("http_request"),
       config: z.object({
@@ -54,10 +54,12 @@ export const workflowNodeSchema: z.ZodType<WorkflowNode> = z.lazy(() =>
     }),
     baseNode.extend({
       type: z.literal("send_message"),
+      agentId: z.string().uuid().optional(),
       config: z.object({ toType: z.enum(["human", "agent"]), toId: z.string().uuid(), kind: z.string(), payload: z.record(z.string(), z.unknown()) }),
     }),
     baseNode.extend({
       type: z.literal("create_task"),
+      agentId: z.string().uuid().optional(),
       config: z.object({ title: z.string(), description: z.string().optional(), ownerType: z.enum(["human", "agent"]), ownerId: z.string().uuid() }),
     }),
     baseNode.extend({ type: z.literal("webhook"), config: z.object({ path: z.string() }) }),
