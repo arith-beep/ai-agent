@@ -66,7 +66,7 @@ const defaultJobOptions: JobsOptions = {
   removeOnFail: { age: 60 * 60 * 24 * 7 },
 };
 
-let queues: {
+interface QueueHandles {
   agentRun: Queue<AgentRunJobData>;
   workflowRun: Queue<WorkflowRunJobData>;
   workflowResume: Queue<WorkflowResumeJobData>;
@@ -74,13 +74,22 @@ let queues: {
   scheduledTrigger: Queue<ScheduledTriggerJobData>;
   embedMemory: Queue<EmbedMemoryJobData>;
   ingestKnowledgeDocument: Queue<IngestKnowledgeDocumentJobData>;
-} | undefined;
+}
+
+// See packages/storage/src/db.ts: each BullMQ Queue duplicates the Redis
+// connection internally, so keeping this on `globalThis` (rather than
+// module scope, which `next dev` re-evaluates on every recompile) is what
+// stops those duplicated connections from leaking one set per edit.
+declare global {
+  // eslint-disable-next-line no-var
+  var __aiAgentQueues: QueueHandles | undefined;
+}
 
 /** Lazily-created singleton queue handles, shared across a process (web app enqueues, worker consumes). */
-export function getQueues() {
-  if (!queues) {
+export function getQueues(): QueueHandles {
+  if (!globalThis.__aiAgentQueues) {
     const connection = getRedisConnection();
-    queues = {
+    globalThis.__aiAgentQueues = {
       agentRun: new Queue(QUEUE_NAMES.agentRun, { connection, defaultJobOptions }),
       workflowRun: new Queue(QUEUE_NAMES.workflowRun, { connection, defaultJobOptions }),
       workflowResume: new Queue(QUEUE_NAMES.workflowResume, { connection, defaultJobOptions }),
@@ -90,5 +99,5 @@ export function getQueues() {
       ingestKnowledgeDocument: new Queue(QUEUE_NAMES.ingestKnowledgeDocument, { connection, defaultJobOptions }),
     };
   }
-  return queues;
+  return globalThis.__aiAgentQueues;
 }
