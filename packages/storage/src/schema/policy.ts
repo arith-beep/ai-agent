@@ -29,6 +29,7 @@ export const approvals = pgTable("approvals", {
   toolExecutionId: uuid("tool_execution_id"),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
   status: approvalStatusEnum("status").notNull().default("pending"),
+  approverRole: text("approver_role"),
   policyId: uuid("policy_id").references(() => policies.id, { onDelete: "set null" }),
   approverId: uuid("approver_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

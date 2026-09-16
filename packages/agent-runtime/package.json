@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-agent/auth": "workspace:*",
     "@ai-agent/memory": "workspace:*",
     "@ai-agent/message-bus": "workspace:*",
     "@ai-agent/model-providers": "workspace:*",

@@ -1,15 +1,18 @@
 import { requireCurrentContext } from "@/lib/session";
-import { tenancyRepo } from "@ai-agent/storage";
+import { tenancyRepo, policyRepo } from "@ai-agent/storage";
+import { PoliciesPanel } from "./_components/policies-panel";
+
+const MANAGE_ROLES = new Set(["owner", "admin"]);
 
 export default async function SettingsPage() {
   const ctx = await requireCurrentContext();
-  const members = await tenancyRepo.listOrgMembers(ctx.orgId);
+  const [members, policies] = await Promise.all([tenancyRepo.listOrgMembers(ctx.orgId), policyRepo.listPoliciesForOrg(ctx.orgId)]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-ink">Settings</h1>
-        <p className="mt-1 text-sm text-ink-muted">Organization and account settings.</p>
+        <p className="mt-1 text-sm text-ink-muted">Organization, members, and the policy engine.</p>
       </div>
 
       <div className="card space-y-2 p-5">
@@ -31,6 +34,8 @@ export default async function SettingsPage() {
           ))}
         </div>
       </div>
+
+      <PoliciesPanel policies={policies} canManage={MANAGE_ROLES.has(ctx.role)} />
     </div>
   );
 }

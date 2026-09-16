@@ -19,13 +19,15 @@ export const approvalStepHandler: NodeHandler = async (node, input, _state, ctx)
   if (!requestedById) {
     throw new Error("approval node has no agent or human to attribute the request to — trigger this workflow manually, or run it as part of an agent.");
   }
+  const approverRole = (node.approverRole as string | undefined) || undefined;
   const approval = await policyRepo.createApproval({
     orgId: ctx.orgId,
     actionType: "workflow.approval",
     requestedByType,
     requestedById,
     workflowRunId: ctx.workflowRunId,
-    payload: { input, approverRole: node.approverRole },
+    payload: { input },
+    approverRole,
   });
   return { type: "suspend", reason: "human_approval_required", resumeKey: approval.id };
 };

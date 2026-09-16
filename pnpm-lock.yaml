@@ -142,6 +142,9 @@ importers:
 
   packages/agent-runtime:
     dependencies:
+      '@ai-agent/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@ai-agent/memory':
         specifier: workspace:*
         version: link:../memory
@@ -464,6 +467,9 @@ importers:
 
   packages/workflow-engine:
     dependencies:
+      '@ai-agent/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@ai-agent/message-bus':
         specifier: workspace:*
         version: link:../message-bus

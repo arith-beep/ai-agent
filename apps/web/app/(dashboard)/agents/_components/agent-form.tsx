@@ -12,6 +12,11 @@ export interface KnowledgeBaseOption {
   id: string;
   name: string;
 }
+export interface AgentPermission {
+  actionPattern: string;
+  requiresApproval: boolean;
+  approverRole?: string;
+}
 
 export interface AgentFormInitial {
   id?: string;
@@ -26,7 +31,10 @@ export interface AgentFormInitial {
   maxTokens?: number;
   toolIds?: string[];
   knowledgeBaseIds?: string[];
+  permissions?: AgentPermission[];
 }
+
+const ROLES = ["owner", "admin", "manager", "member", "viewer"] as const;
 
 const MODEL_OPTIONS: Record<"openai" | "anthropic" | "google", string[]> = {
   openai: ["gpt-4o", "gpt-4o-mini", "o1"],
@@ -57,11 +65,24 @@ export function AgentForm({
   const [maxTokens, setMaxTokens] = useState(initial?.maxTokens ?? 4096);
   const [toolIds, setToolIds] = useState<string[]>(initial?.toolIds ?? []);
   const [knowledgeBaseIds, setKnowledgeBaseIds] = useState<string[]>(initial?.knowledgeBaseIds ?? []);
+  const [permissions, setPermissions] = useState<AgentPermission[]>(initial?.permissions ?? []);
+  const [newPattern, setNewPattern] = useState("");
+  const [newApproverRole, setNewApproverRole] = useState<(typeof ROLES)[number] | "">("manager");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggle(list: string[], setList: (v: string[]) => void, id: string) {
     setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+  }
+
+  function addPermission() {
+    if (!newPattern.trim()) return;
+    setPermissions([...permissions, { actionPattern: newPattern.trim(), requiresApproval: true, approverRole: newApproverRole || undefined }]);
+    setNewPattern("");
+  }
+
+  function removePermission(index: number) {
+    setPermissions(permissions.filter((_, i) => i !== index));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -78,7 +99,7 @@ export function AgentForm({
       model: { provider, model, temperature, maxTokens },
       toolIds,
       knowledgeBaseIds,
-      permissions: [],
+      permissions,
     };
 
     const url = isEdit ? `/api/agents/${initial?.id}` : "/api/agents";
@@ -235,6 +256,50 @@ export function AgentForm({
             ))}
           </div>
         )}
+      </div>
+
+      <div className="card space-y-3 p-5">
+        <h2 className="text-sm font-medium text-ink">Permissions</h2>
+        <p className="text-xs text-ink-faint">
+          Action patterns this agent needs human approval for before acting (e.g. <code className="text-ink">tool.send_email</code>,{" "}
+          <code className="text-ink">task.complete</code>). Matched against a tool&apos;s name or a task action when the agent tries to act
+          autonomously.
+        </p>
+        {permissions.length > 0 && (
+          <ul className="space-y-1.5">
+            {permissions.map((p, i) => (
+              <li key={i} className="flex items-center justify-between rounded-md border border-border-subtle px-3 py-2 text-sm">
+                <span className="font-mono text-ink">{p.actionPattern}</span>
+                <div className="flex items-center gap-2">
+                  <span className="badge bg-warning/15 text-warning">requires {p.approverRole ?? "any"} approval</span>
+                  <button type="button" className="btn-ghost text-danger" onClick={() => removePermission(i)}>
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="label">Action pattern</label>
+            <input className="input font-mono" placeholder="tool.send_email" value={newPattern} onChange={(e) => setNewPattern(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Approver role</label>
+            <select className="input" value={newApproverRole} onChange={(e) => setNewApproverRole(e.target.value as typeof newApproverRole)}>
+              <option value="">Any</option>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="button" className="btn-secondary" onClick={addPermission}>
+            Add
+          </button>
+        </div>
       </div>
 
       <div className="flex justify-end gap-2">

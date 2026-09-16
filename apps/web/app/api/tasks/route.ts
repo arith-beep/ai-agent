@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { tasksRepo } from "@ai-agent/storage";
+import { createTask } from "@ai-agent/tasks";
 import { getApiContext } from "@/lib/api-session";
 
 export async function GET() {
@@ -16,6 +17,8 @@ const createTaskSchema = z.object({
   ownerType: z.enum(["human", "agent"]),
   ownerId: z.string().uuid(),
   priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  dueDate: z.string().datetime().optional(),
+  dependsOnTaskIds: z.array(z.string().uuid()).default([]),
 });
 
 export async function POST(request: Request) {
@@ -24,13 +27,12 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const parsed = createTaskSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid input", issues: parsed.error.issues }, { status: 400 });
 
-  const task = await tasksRepo.createTask({
+  const task = await createTask({
     orgId: ctx.orgId,
     createdByType: "human",
     createdById: ctx.userId,
-    dependsOnTaskIds: [],
     ...parsed.data,
   });
   return NextResponse.json({ task }, { status: 201 });

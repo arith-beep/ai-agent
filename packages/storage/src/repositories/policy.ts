@@ -16,7 +16,18 @@ export async function createPolicy(input: {
 }) {
   const db = getDb();
   const [policy] = await db.insert(schema.policies).values(input).returning();
+  if (!policy) throw new Error("Failed to create policy");
   return policy;
+}
+
+export async function deletePolicy(orgId: string, policyId: string) {
+  const db = getDb();
+  await db.delete(schema.policies).where(and(eq(schema.policies.id, policyId), eq(schema.policies.orgId, orgId)));
+}
+
+export async function getPolicy(policyId: string) {
+  const db = getDb();
+  return db.query.policies.findFirst({ where: eq(schema.policies.id, policyId) });
 }
 
 export async function createApproval(input: {
@@ -28,6 +39,7 @@ export async function createApproval(input: {
   toolExecutionId?: string;
   payload: Record<string, unknown>;
   policyId?: string;
+  approverRole?: string;
 }) {
   const db = getDb();
   const [approval] = await db.insert(schema.approvals).values({ ...input, status: "pending" }).returning();

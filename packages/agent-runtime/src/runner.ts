@@ -67,6 +67,7 @@ export async function executeAgentRun(params: ExecuteAgentRunParams): Promise<vo
       runId,
       traceId,
       rootSpanId: rootSpan.id,
+      agentPermissions: config.permissions,
     });
 
     const modelSpan = await startSpan({

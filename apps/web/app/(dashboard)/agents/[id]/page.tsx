@@ -86,6 +86,11 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
             maxTokens: agent.maxTokens,
             toolIds: config.tools.map((t) => t.id),
             knowledgeBaseIds: config.knowledgeBases.map((k) => k.id),
+            permissions: config.permissions.map((p) => ({
+              actionPattern: p.actionPattern,
+              requiresApproval: p.requiresApproval,
+              approverRole: p.approverRole ?? undefined,
+            })),
           }}
           tools={allTools}
           knowledgeBases={allKbs}

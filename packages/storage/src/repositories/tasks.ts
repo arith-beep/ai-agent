@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { CreateTaskInput, TaskStatus } from "@ai-agent/shared-types";
 import { getDb, schema } from "../db";
 
@@ -36,6 +36,17 @@ export async function listTasksForOwner(ownerType: "human" | "agent", ownerId: s
     where: and(eq(schema.tasks.ownerType, ownerType), eq(schema.tasks.ownerId, ownerId)),
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
+}
+
+export async function getTask(taskId: string) {
+  const db = getDb();
+  return db.query.tasks.findFirst({ where: eq(schema.tasks.id, taskId) });
+}
+
+export async function getTasksByIds(taskIds: string[]) {
+  const db = getDb();
+  if (taskIds.length === 0) return [];
+  return db.query.tasks.findMany({ where: inArray(schema.tasks.id, taskIds) });
 }
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus, output?: unknown) {

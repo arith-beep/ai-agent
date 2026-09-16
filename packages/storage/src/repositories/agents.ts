@@ -94,6 +94,19 @@ export async function updateAgent(orgId: string, agentId: string, input: UpdateA
         .values(input.knowledgeBaseIds.map((knowledgeBaseId) => ({ agentId, knowledgeBaseId })));
     }
   }
+  if (input.permissions) {
+    await db.delete(schema.agentPermissions).where(eq(schema.agentPermissions.agentId, agentId));
+    if (input.permissions.length > 0) {
+      await db.insert(schema.agentPermissions).values(
+        input.permissions.map((p) => ({
+          agentId,
+          actionPattern: p.actionPattern,
+          requiresApproval: p.requiresApproval,
+          approverRole: p.approverRole,
+        })),
+      );
+    }
+  }
   return updated;
 }
 

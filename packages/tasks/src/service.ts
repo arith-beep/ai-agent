@@ -24,6 +24,10 @@ export async function listTasksForOwner(ownerType: "human" | "agent", ownerId: s
   return tasksRepo.listTasksForOwner(ownerType, ownerId);
 }
 
+const GATED_BY_DEPENDENCIES: TaskStatus[] = ["in_progress", "done"];
+
+export class TaskDependencyError extends Error {}
+
 export async function transitionTask(
   orgId: string,
   taskId: string,
@@ -31,6 +35,19 @@ export async function transitionTask(
   actor: { type: "human" | "agent" | "system"; id?: string },
   output?: unknown,
 ) {
+  if (GATED_BY_DEPENDENCIES.includes(status)) {
+    const current = await tasksRepo.getTask(taskId);
+    if (current && current.dependsOnTaskIds.length > 0) {
+      const dependencies = await tasksRepo.getTasksByIds(current.dependsOnTaskIds);
+      const unfinished = dependencies.filter((d) => d.status !== "done");
+      if (unfinished.length > 0) {
+        throw new TaskDependencyError(
+          `Cannot move to "${status}" — ${unfinished.length} dependency task(s) are not done yet: ${unfinished.map((t) => t.title).join(", ")}.`,
+        );
+      }
+    }
+  }
+
   const task = await tasksRepo.updateTaskStatus(taskId, status, output);
   await auditRepo.writeAuditLog({
     orgId,
