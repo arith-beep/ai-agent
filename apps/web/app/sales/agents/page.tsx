@@ -5,8 +5,9 @@ import { salesRepo } from "@ai-agent/storage";
 import { AgentStatusBadge } from "../_components/status-badge";
 import { PauseResumeButton } from "./_components/pause-resume-button";
 
-function relativeTime(date: Date | null): string {
-  if (!date) return "No activity yet";
+function relativeTime(value: Date | string | null): string {
+  if (!value) return "No activity yet";
+  const date = value instanceof Date ? value : new Date(value);
   const diffMs = Date.now() - date.getTime();
   const mins = Math.round(diffMs / 60000);
   if (mins < 1) return "Just now";

@@ -2,9 +2,12 @@ import Link from "next/link";
 import { loginAction } from "@/lib/actions/auth-actions";
 import { AuthShell } from "../_components/auth-shell";
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
+
   return (
     <AuthShell title="Welcome back" subtitle="Sign in to keep building your sales agent.">
+      {error && <div className="mb-4 rounded-pnl border border-critical/30 bg-critical-soft px-3 py-2.5 text-[13px] text-critical">{error}</div>}
       <form action={loginAction} className="space-y-4">
         <div>
           <label className="field-label" htmlFor="email">

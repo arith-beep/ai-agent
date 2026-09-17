@@ -14,8 +14,10 @@ import {
   Settings,
   Menu,
   X,
+  LogOut,
 } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { logoutAction } from "@/lib/actions/auth-actions";
 
 const NAV_ITEMS = [
   { href: "/sales", label: "Overview", icon: LayoutDashboard },
@@ -108,6 +110,12 @@ export function SalesSidebar({ orgName }: { orgName: string }) {
               <Link href="/platform" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
                 ← Agent Platform
               </Link>
+              <form action={logoutAction}>
+                <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted">
+                  <LogOut size={12} strokeWidth={1.75} />
+                  Log out
+                </button>
+              </form>
             </div>
           </aside>
         </div>
@@ -119,10 +127,16 @@ export function SalesSidebar({ orgName }: { orgName: string }) {
           <ThemeToggle />
         </div>
         <NavLinks pathname={pathname} />
-        <div className="border-t border-hairline px-4 py-3">
+        <div className="flex items-center justify-between border-t border-hairline px-4 py-3">
           <Link href="/platform" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
             ← Agent Platform
           </Link>
+          <form action={logoutAction}>
+            <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" title="Log out">
+              <LogOut size={12} strokeWidth={1.75} />
+              Log out
+            </button>
+          </form>
         </div>
       </aside>
     </>

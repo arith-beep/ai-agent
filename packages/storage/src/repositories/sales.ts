@@ -637,7 +637,12 @@ export async function getAgentStats(orgId: string): Promise<Record<string, Agent
   const result: Record<string, AgentStatsRow> = {};
   for (const row of conversationRows) {
     if (!row.agentId) continue;
-    result[row.agentId] = { agentId: row.agentId, conversationCount: row.n, qualifiedLeadCount: 0, lastActivityAt: row.lastActivityAt ?? null };
+    result[row.agentId] = {
+      agentId: row.agentId,
+      conversationCount: row.n,
+      qualifiedLeadCount: 0,
+      lastActivityAt: row.lastActivityAt ? new Date(row.lastActivityAt) : null,
+    };
   }
   for (const row of leadRows) {
     if (!row.agentId) continue;
