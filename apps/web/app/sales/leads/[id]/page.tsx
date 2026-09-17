@@ -45,7 +45,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <div className="lg:col-span-2 space-y-6">
           <div className="card p-5">
             <h2 className="mb-4 text-sm font-medium text-ink">Contact information</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Name" value={lead.name} />
               <Field label="Email" value={lead.email} />
               <Field label="Phone" value={lead.phone} />

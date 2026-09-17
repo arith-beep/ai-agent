@@ -35,7 +35,7 @@ export default async function ConversationDetailPage({ params }: { params: Promi
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/sales/conversations" className="text-xs text-ink-faint hover:text-ink-muted">
             ← All conversations

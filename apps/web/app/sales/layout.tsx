@@ -5,10 +5,10 @@ export default async function SalesLayout({ children }: { children: React.ReactN
   const ctx = await requireCurrentContext();
 
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="flex min-h-screen flex-col bg-canvas md:flex-row">
       <SalesSidebar orgName={ctx.orgName} />
       <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">{children}</div>
       </main>
     </div>
   );

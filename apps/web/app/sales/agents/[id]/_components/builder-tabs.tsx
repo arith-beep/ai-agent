@@ -42,13 +42,13 @@ export function BuilderTabs({
 
   return (
     <div>
-      <div className="mb-4 flex gap-1 border-b border-border">
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`border-b-2 px-3 py-2 text-sm transition-colors ${
+            className={`shrink-0 border-b-2 px-3 py-2 text-sm transition-colors ${
               tab === t ? "border-accent text-ink" : "border-transparent text-ink-muted hover:text-ink"
             }`}
           >

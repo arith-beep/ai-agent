@@ -9,7 +9,7 @@ export default async function SalesAgentsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-ink">Sales Agents</h1>
           <p className="mt-1 text-sm text-ink-muted">Create and configure AI agents that talk to your leads.</p>

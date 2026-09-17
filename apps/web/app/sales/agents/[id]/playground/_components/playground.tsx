@@ -98,9 +98,9 @@ export function Playground({ agentId, agentName, modelLabel }: { agentId: string
   }
 
   return (
-    <div className="grid h-[calc(100vh-8rem)] grid-cols-[340px_1fr] gap-4">
+    <div className="flex flex-col gap-4 lg:grid lg:h-[calc(100vh-8rem)] lg:grid-cols-[340px_1fr]">
       {/* LEFT: config / debug */}
-      <div className="flex flex-col gap-3 overflow-y-auto">
+      <div className="order-2 flex flex-col gap-3 lg:order-1 lg:overflow-y-auto">
         <div className="card p-4">
           <div className="text-xs font-medium text-ink-muted">Agent</div>
           <div className="mt-1 text-sm text-ink">{agentName}</div>
@@ -173,10 +173,10 @@ export function Playground({ agentId, agentName, modelLabel }: { agentId: string
       </div>
 
       {/* RIGHT: chat */}
-      <div className="flex flex-col card p-0">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="order-1 flex h-[70vh] flex-col card p-0 lg:order-2 lg:h-full">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-ink">Test conversation</span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn-ghost" onClick={handleClear}>
               Reset conversation
             </button>

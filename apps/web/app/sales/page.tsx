@@ -35,7 +35,7 @@ export default async function SalesOverviewPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-ink">Overview</h1>
           <p className="mt-1 text-sm text-ink-muted">Real-time snapshot of your sales agents' performance.</p>
