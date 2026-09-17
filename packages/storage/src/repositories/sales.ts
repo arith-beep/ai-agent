@@ -510,6 +510,7 @@ export async function resolveHandoff(orgId: string, handoffId: string, assignedT
     .set({ status: "resolved", resolvedAt: new Date(), assignedTo })
     .where(and(eq(schema.salesHandoffs.id, handoffId), eq(schema.salesHandoffs.orgId, orgId)))
     .returning();
+  if (handoff) await setConversationStatus(handoff.conversationId, "active");
   return handoff;
 }
 

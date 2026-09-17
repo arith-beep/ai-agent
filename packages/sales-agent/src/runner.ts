@@ -71,6 +71,7 @@ export async function runConversationTurn(params: RunConversationTurnParams): Pr
       debug,
     );
 
+    let streamError: unknown;
     const result = streamText({
       model,
       system: buildSalesSystemPrompt(agent),
@@ -79,10 +80,20 @@ export async function runConversationTurn(params: RunConversationTurnParams): Pr
       maxSteps: MAX_TOOL_STEPS,
       temperature: agent.temperature,
       maxTokens: agent.maxTokens,
+      // streamText() does not throw on the request/stream failing — the AI SDK only
+      // surfaces that failure through this callback, leaving textStream to complete
+      // silently with zero deltas. Without capturing it here, a real provider error
+      // (bad key, rate limit, etc.) would look identical to a legitimately empty
+      // response and get papered over by the placeholder text below.
+      onError: ({ error }) => {
+        streamError = error;
+      },
     });
 
     let text = "";
     for await (const delta of result.textStream) text += delta;
+
+    if (streamError) throw streamError;
     if (!text.trim()) text = "I've made a note of that — is there anything else I can help with?";
 
     return await finish(text);
