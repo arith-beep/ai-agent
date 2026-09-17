@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Plus, X } from "lucide-react";
 
 export function TagListEditor({
   items,
@@ -23,12 +24,12 @@ export function TagListEditor({
   return (
     <div>
       {items.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1.5">
+        <div className="mb-2.5 flex flex-wrap gap-1.5">
           {items.map((item, i) => (
-            <span key={i} className="badge gap-1 bg-surface-raised text-ink">
+            <span key={i} className="chip gap-1 border border-hairline bg-panel pr-1 text-fg">
               {item}
-              <button type="button" onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="text-ink-faint hover:text-danger">
-                ×
+              <button type="button" onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="rounded-full p-0.5 text-fg-faint hover:bg-critical-soft hover:text-critical">
+                <X size={11} />
               </button>
             </span>
           ))}
@@ -36,7 +37,7 @@ export function TagListEditor({
       )}
       <div className="flex gap-2">
         <input
-          className="input"
+          className="field"
           value={draft}
           placeholder={placeholder}
           onChange={(e) => setDraft(e.target.value)}
@@ -47,8 +48,8 @@ export function TagListEditor({
             }
           }}
         />
-        <button type="button" className="btn-secondary shrink-0" onClick={add}>
-          Add
+        <button type="button" className="btn-outline shrink-0 gap-1 px-3" onClick={add}>
+          <Plus size={14} />
         </button>
       </div>
     </div>

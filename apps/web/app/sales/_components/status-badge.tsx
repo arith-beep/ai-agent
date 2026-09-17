@@ -1,11 +1,11 @@
 const LEAD_STATUS_STYLES: Record<string, string> = {
-  new: "bg-surface-raised text-ink-muted",
-  engaged: "bg-accent/15 text-accent",
-  qualified: "bg-success/15 text-success",
-  unqualified: "bg-ink-faint/15 text-ink-faint",
-  meeting_requested: "bg-warning/15 text-warning",
-  meeting_booked: "bg-success/15 text-success",
-  human_handoff: "bg-danger/15 text-danger",
+  new: "bg-sunken text-fg-muted",
+  engaged: "bg-brand-soft text-brand",
+  qualified: "bg-positive-soft text-positive",
+  unqualified: "bg-sunken text-fg-faint",
+  meeting_requested: "bg-caution-soft text-caution",
+  meeting_booked: "bg-positive-soft text-positive",
+  human_handoff: "bg-critical-soft text-critical",
 };
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
@@ -19,26 +19,26 @@ const LEAD_STATUS_LABELS: Record<string, string> = {
 };
 
 export function LeadStatusBadge({ status }: { status: string }) {
-  return <span className={`badge ${LEAD_STATUS_STYLES[status] ?? "bg-surface-raised text-ink-muted"}`}>{LEAD_STATUS_LABELS[status] ?? status}</span>;
+  return <span className={`chip ${LEAD_STATUS_STYLES[status] ?? "bg-sunken text-fg-muted"}`}>{LEAD_STATUS_LABELS[status] ?? status}</span>;
 }
 
 const AGENT_STATUS_STYLES: Record<string, string> = {
-  draft: "bg-surface-raised text-ink-muted",
-  active: "bg-success/15 text-success",
-  paused: "bg-warning/15 text-warning",
-  archived: "bg-ink-faint/15 text-ink-faint",
+  draft: "bg-sunken text-fg-muted",
+  active: "bg-positive-soft text-positive",
+  paused: "bg-caution-soft text-caution",
+  archived: "bg-sunken text-fg-faint",
 };
 
 export function AgentStatusBadge({ status }: { status: string }) {
-  return <span className={`badge ${AGENT_STATUS_STYLES[status] ?? "bg-surface-raised text-ink-muted"}`}>{status}</span>;
+  return <span className={`chip ${AGENT_STATUS_STYLES[status] ?? "bg-sunken text-fg-muted"}`}>{status}</span>;
 }
 
 const CONVERSATION_STATUS_STYLES: Record<string, string> = {
-  active: "bg-success/15 text-success",
-  handoff: "bg-danger/15 text-danger",
-  closed: "bg-ink-faint/15 text-ink-faint",
+  active: "bg-positive-soft text-positive",
+  handoff: "bg-critical-soft text-critical",
+  closed: "bg-sunken text-fg-faint",
 };
 
 export function ConversationStatusBadge({ status }: { status: string }) {
-  return <span className={`badge ${CONVERSATION_STATUS_STYLES[status] ?? "bg-surface-raised text-ink-muted"}`}>{status}</span>;
+  return <span className={`chip ${CONVERSATION_STATUS_STYLES[status] ?? "bg-sunken text-fg-muted"}`}>{status}</span>;
 }

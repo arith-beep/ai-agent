@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { TagListEditor } from "./tag-list-editor";
+import { SaveStatusIndicator } from "./save-status";
+import { useAutosave } from "../_hooks/use-autosave";
 
 export interface QualificationCriterion {
   name: string;
@@ -27,37 +30,42 @@ export interface PlaybookValue {
   followUpBehavior: string;
 }
 
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="surface p-5">
+      <h3 className="text-[13.5px] font-semibold text-fg">{title}</h3>
+      {hint && <p className="mt-0.5 text-[12.5px] text-fg-faint">{hint}</p>}
+      <div className="mt-4 space-y-4">{children}</div>
+    </div>
+  );
+}
+
 function CriteriaEditor({ items, onChange }: { items: QualificationCriterion[]; onChange: (v: QualificationCriterion[]) => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-
   return (
     <div>
       {items.length > 0 && (
-        <ul className="mb-2 space-y-1.5">
+        <ul className="mb-3 space-y-1.5">
           {items.map((item, i) => (
-            <li key={i} className="flex items-start justify-between rounded-md border border-border-subtle px-3 py-2 text-sm">
-              <div>
-                <div className="font-medium text-ink">{item.name}</div>
-                {item.description && <div className="text-xs text-ink-faint">{item.description}</div>}
+            <li key={i} className="flex items-start justify-between gap-3 rounded-pnl border border-hairline bg-panel px-3.5 py-2.5">
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium text-fg">{item.name}</div>
+                {item.description && <div className="text-[12px] text-fg-faint">{item.description}</div>}
               </div>
-              <button type="button" className="btn-ghost text-danger" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
-                Remove
+              <button type="button" onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="shrink-0 rounded-pnl p-1 text-fg-faint hover:bg-critical-soft hover:text-critical">
+                <X size={13} />
               </button>
             </li>
           ))}
         </ul>
       )}
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <input className="input" placeholder="Criterion name (e.g. Budget)" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="flex-[2]">
-          <input className="input" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input className="field sm:flex-1" placeholder="Criterion name (e.g. Budget)" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="field sm:flex-[2]" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
         <button
           type="button"
-          className="btn-secondary shrink-0"
+          className="btn-outline shrink-0 px-3"
           onClick={() => {
             if (!name.trim()) return;
             onChange([...items, { name: name.trim(), description: description.trim() || undefined }]);
@@ -65,7 +73,7 @@ function CriteriaEditor({ items, onChange }: { items: QualificationCriterion[]; 
             setDescription("");
           }}
         >
-          Add
+          <Plus size={14} />
         </button>
       </div>
     </div>
@@ -75,30 +83,29 @@ function CriteriaEditor({ items, onChange }: { items: QualificationCriterion[]; 
 function ObjectionsEditor({ items, onChange }: { items: ObjectionEntry[]; onChange: (v: ObjectionEntry[]) => void }) {
   const [objection, setObjection] = useState("");
   const [response, setResponse] = useState("");
-
   return (
     <div>
       {items.length > 0 && (
-        <ul className="mb-2 space-y-1.5">
+        <ul className="mb-3 space-y-1.5">
           {items.map((item, i) => (
-            <li key={i} className="rounded-md border border-border-subtle px-3 py-2 text-sm">
-              <div className="flex items-start justify-between">
-                <div className="font-medium text-ink">"{item.objection}"</div>
-                <button type="button" className="btn-ghost text-danger" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
-                  Remove
+            <li key={i} className="rounded-pnl border border-hairline bg-panel px-3.5 py-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-[13px] font-medium text-fg">&ldquo;{item.objection}&rdquo;</div>
+                <button type="button" onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="shrink-0 rounded-pnl p-1 text-fg-faint hover:bg-critical-soft hover:text-critical">
+                  <X size={13} />
                 </button>
               </div>
-              <div className="mt-1 text-xs text-ink-muted">{item.response}</div>
+              <div className="mt-1 text-[12.5px] text-fg-muted">{item.response}</div>
             </li>
           ))}
         </ul>
       )}
       <div className="space-y-2">
-        <input className="input" placeholder="Objection the lead might raise" value={objection} onChange={(e) => setObjection(e.target.value)} />
-        <textarea className="input" rows={2} placeholder="How the agent should respond" value={response} onChange={(e) => setResponse(e.target.value)} />
+        <input className="field" placeholder="Objection the lead might raise" value={objection} onChange={(e) => setObjection(e.target.value)} />
+        <textarea className="field min-h-[64px]" placeholder="How the agent should respond" value={response} onChange={(e) => setResponse(e.target.value)} />
         <button
           type="button"
-          className="btn-secondary"
+          className="btn-outline"
           onClick={() => {
             if (!objection.trim() || !response.trim()) return;
             onChange([...items, { objection: objection.trim(), response: response.trim() }]);
@@ -116,102 +123,94 @@ function ObjectionsEditor({ items, onChange }: { items: ObjectionEntry[]; onChan
 export function PlaybookTab({ agentId, initial }: { agentId: string; initial: PlaybookValue }) {
   const router = useRouter();
   const [value, setValue] = useState(initial);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
-  async function save() {
-    setSaving(true);
-    setError(null);
-    setSaved(false);
+  const status = useAutosave(value, async (v) => {
     const res = await fetch(`/api/sales/agents/${agentId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ playbook: value }),
+      body: JSON.stringify({ playbook: v }),
     });
-    setSaving(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Failed to save.");
-      return;
+      throw new Error(body.error ?? "Failed to save.");
     }
-    setSaved(true);
+    setError(null);
     router.refresh();
-  }
+  });
 
   return (
-    <div className="space-y-4">
-      {error && <div className="card border-danger/40 bg-danger/10 p-3 text-sm text-danger">{error}</div>}
-
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Objective &amp; process</h2>
+    <div>
+      <div className="mb-5 flex items-center justify-between">
         <div>
-          <label className="label">Primary objective</label>
-          <textarea className="input" rows={2} value={value.primaryObjective} onChange={(e) => setValue({ ...value, primaryObjective: e.target.value })} />
+          <h2 className="font-display text-[17px] font-semibold text-fg">Sales Playbook</h2>
+          <p className="mt-0.5 text-[13px] text-fg-muted">How your agent qualifies, positions, and moves a conversation forward.</p>
         </div>
-        <div>
-          <label className="label">Target customer / ICP</label>
-          <textarea className="input" rows={2} value={value.targetCustomer} onChange={(e) => setValue({ ...value, targetCustomer: e.target.value })} />
-        </div>
-        <div>
-          <label className="label">Sales process</label>
-          <textarea className="input" rows={3} value={value.salesProcess} onChange={(e) => setValue({ ...value, salesProcess: e.target.value })} />
-        </div>
+        <SaveStatusIndicator status={status} />
       </div>
 
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Qualification</h2>
-        <label className="label">Criteria</label>
-        <CriteriaEditor items={value.qualificationCriteria} onChange={(qualificationCriteria) => setValue({ ...value, qualificationCriteria })} />
-        <label className="label mt-3">Qualification questions</label>
-        <TagListEditor
-          items={value.qualificationQuestions}
-          onChange={(qualificationQuestions) => setValue({ ...value, qualificationQuestions })}
-          placeholder="e.g. What's your timeline for making a decision?"
-        />
-        <label className="label mt-3">Discovery questions</label>
-        <TagListEditor
-          items={value.discoveryQuestions}
-          onChange={(discoveryQuestions) => setValue({ ...value, discoveryQuestions })}
-          placeholder="e.g. What's driving you to look into this now?"
-        />
-      </div>
+      {error && <div className="mb-4 rounded-pnl border border-critical/30 bg-critical-soft px-3.5 py-2.5 text-[13px] text-critical">{error}</div>}
 
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Positioning</h2>
-        <div>
-          <label className="label">Value proposition</label>
-          <textarea className="input" rows={2} value={value.valueProposition} onChange={(e) => setValue({ ...value, valueProposition: e.target.value })} />
-        </div>
-        <div>
-          <label className="label">Product positioning</label>
-          <textarea className="input" rows={2} value={value.productPositioning} onChange={(e) => setValue({ ...value, productPositioning: e.target.value })} />
-        </div>
-        <label className="label">Objection handling</label>
-        <ObjectionsEditor items={value.objectionHandling} onChange={(objectionHandling) => setValue({ ...value, objectionHandling })} />
-      </div>
+      <div className="space-y-5">
+        <Section title="Objective & process">
+          <div>
+            <label className="field-label">Primary objective</label>
+            <textarea className="field min-h-[64px]" value={value.primaryObjective} onChange={(e) => setValue({ ...value, primaryObjective: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Target customer / ICP</label>
+            <textarea className="field min-h-[64px]" value={value.targetCustomer} onChange={(e) => setValue({ ...value, targetCustomer: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Sales process</label>
+            <textarea className="field min-h-[80px]" value={value.salesProcess} onChange={(e) => setValue({ ...value, salesProcess: e.target.value })} />
+          </div>
+        </Section>
 
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Moving forward</h2>
-        <div>
-          <label className="label">Call to action</label>
-          <input className="input" value={value.cta} onChange={(e) => setValue({ ...value, cta: e.target.value })} />
-        </div>
-        <div>
-          <label className="label">Closing behavior</label>
-          <textarea className="input" rows={2} value={value.closingBehavior} onChange={(e) => setValue({ ...value, closingBehavior: e.target.value })} />
-        </div>
-        <div>
-          <label className="label">Follow-up behavior</label>
-          <textarea className="input" rows={2} value={value.followUpBehavior} onChange={(e) => setValue({ ...value, followUpBehavior: e.target.value })} />
-        </div>
-      </div>
+        <Section title="Qualification" hint="Gathered progressively over the conversation, not all at once.">
+          <div>
+            <label className="field-label">Criteria</label>
+            <CriteriaEditor items={value.qualificationCriteria} onChange={(qualificationCriteria) => setValue({ ...value, qualificationCriteria })} />
+          </div>
+          <div>
+            <label className="field-label">Qualification questions</label>
+            <TagListEditor items={value.qualificationQuestions} onChange={(qualificationQuestions) => setValue({ ...value, qualificationQuestions })} placeholder="e.g. What's your timeline for making a decision?" />
+          </div>
+          <div>
+            <label className="field-label">Discovery questions</label>
+            <TagListEditor items={value.discoveryQuestions} onChange={(discoveryQuestions) => setValue({ ...value, discoveryQuestions })} placeholder="e.g. What's driving you to look into this now?" />
+          </div>
+        </Section>
 
-      <div className="flex items-center gap-3">
-        <button type="button" className="btn-primary" disabled={saving} onClick={save}>
-          {saving ? "Saving..." : "Save Playbook"}
-        </button>
-        {saved && <span className="text-xs text-success">Saved.</span>}
+        <Section title="Positioning">
+          <div>
+            <label className="field-label">Value proposition</label>
+            <textarea className="field min-h-[64px]" value={value.valueProposition} onChange={(e) => setValue({ ...value, valueProposition: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Product positioning</label>
+            <textarea className="field min-h-[64px]" value={value.productPositioning} onChange={(e) => setValue({ ...value, productPositioning: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Objection handling</label>
+            <ObjectionsEditor items={value.objectionHandling} onChange={(objectionHandling) => setValue({ ...value, objectionHandling })} />
+          </div>
+        </Section>
+
+        <Section title="Moving forward">
+          <div>
+            <label className="field-label">Call to action</label>
+            <input className="field" value={value.cta} onChange={(e) => setValue({ ...value, cta: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Closing behavior</label>
+            <textarea className="field min-h-[64px]" value={value.closingBehavior} onChange={(e) => setValue({ ...value, closingBehavior: e.target.value })} />
+          </div>
+          <div>
+            <label className="field-label">Follow-up behavior</label>
+            <textarea className="field min-h-[64px]" value={value.followUpBehavior} onChange={(e) => setValue({ ...value, followUpBehavior: e.target.value })} />
+          </div>
+        </Section>
       </div>
     </div>
   );

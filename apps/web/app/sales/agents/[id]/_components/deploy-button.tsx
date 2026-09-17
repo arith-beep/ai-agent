@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Rocket } from "lucide-react";
 
 export function DeployButton({ agentId, status }: { agentId: string; status: string }) {
   const router = useRouter();
@@ -23,10 +24,11 @@ export function DeployButton({ agentId, status }: { agentId: string; status: str
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button type="button" className="btn-primary" disabled={submitting} onClick={deploy}>
+      <button type="button" className="btn-brand gap-1.5" disabled={submitting} onClick={deploy}>
+        <Rocket size={14} />
         {submitting ? "Deploying..." : status === "active" ? "Redeploy" : "Deploy"}
       </button>
-      {error && <span className="text-xs text-danger">{error}</span>}
+      {error && <span className="text-[11.5px] text-critical">{error}</span>}
     </div>
   );
 }

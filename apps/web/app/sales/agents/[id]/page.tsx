@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FlaskConical } from "lucide-react";
 import { requireCurrentContext } from "@/lib/session";
 import { salesRepo, toolsRepo } from "@ai-agent/storage";
 import { buildSalesSystemPrompt } from "@ai-agent/sales-agent";
 import { salesPlaybookSchema, salesGuardrailsSchema } from "@ai-agent/shared-types";
 import { seedSalesTools } from "@ai-agent/tools";
 import { AgentStatusBadge } from "../../_components/status-badge";
-import { BuilderTabs } from "./_components/builder-tabs";
+import { BuilderWorkspace } from "./_components/builder-workspace";
 import { DeployButton } from "./_components/deploy-button";
 
 export default async function SalesAgentBuilderPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,26 +36,32 @@ export default async function SalesAgentBuilderPage({ params }: { params: Promis
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-ink">{agent.name}</h1>
+            <Link href="/sales/agents" className="text-[12px] text-fg-faint hover:text-fg-muted">
+              Sales Agents
+            </Link>
+            <span className="text-fg-faint">/</span>
+            <h1 className="font-display text-[18px] font-semibold tracking-tight text-fg">{agent.name}</h1>
             <AgentStatusBadge status={agent.status} />
           </div>
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 text-[13px] text-fg-muted">
             {agent.role} at {agent.companyName}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/sales/agents/${id}/playground`} className="btn-secondary">
+          <Link href={`/sales/agents/${id}/playground`} className="btn-outline gap-1.5">
+            <FlaskConical size={14} />
             Test Agent
           </Link>
           <DeployButton agentId={id} status={agent.status} />
         </div>
       </div>
 
-      <BuilderTabs
+      <BuilderWorkspace
         agentId={id}
+        agentName={agent.name}
         identity={{
           name: agent.name,
           companyName: agent.companyName,

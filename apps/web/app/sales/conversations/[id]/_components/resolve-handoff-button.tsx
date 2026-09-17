@@ -23,10 +23,10 @@ export function ResolveHandoffButton({ handoffId }: { handoffId: string }) {
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button type="button" className="btn-primary" disabled={resolving} onClick={resolve}>
+      <button type="button" className="btn-brand !py-1.5 text-[12.5px]" disabled={resolving} onClick={resolve}>
         {resolving ? "Resolving..." : "Resolve handoff"}
       </button>
-      {error && <span className="text-xs text-danger">{error}</span>}
+      {error && <span className="text-[11px] text-critical">{error}</span>}
     </div>
   );
 }

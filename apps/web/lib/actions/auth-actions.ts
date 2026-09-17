@@ -39,13 +39,13 @@ export async function signupAction(formData: FormData) {
   const slug = `${baseSlug}-${user.id.slice(0, 8)}`;
   await tenancyRepo.createOrganization({ name: orgName, slug, ownerUserId: user.id });
 
-  await signIn("credentials", { email, password, redirectTo: "/" });
+  await signIn("credentials", { email, password, redirectTo: "/sales" });
 }
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  await signIn("credentials", { email, password, redirectTo: "/" });
+  await signIn("credentials", { email, password, redirectTo: "/sales" });
 }
 
 export async function logoutRedirect() {

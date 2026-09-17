@@ -9,19 +9,39 @@ const generateInputSchema = z.object({ prompt: z.string().min(10).max(2000) });
 
 const configShapeSchema = salesAgentConfigSchema.omit({ modelProvider: true, modelName: true, temperature: true, maxTokens: true });
 
+/**
+ * The onboarding wizard sends a prompt shaped like
+ * "Company: X. What they sell: Y. Primary goal for the sales agent: Z."
+ * — when that structure is present, pull the pieces out directly instead of
+ * dumping the whole blob into every field.
+ */
+function parseStructuredPrompt(prompt: string) {
+  const company = /Company:\s*([^.]+)\./i.exec(prompt)?.[1]?.trim();
+  const product = /What they sell:\s*([^.]+)\./i.exec(prompt)?.[1]?.trim();
+  const goal = /Primary goal for the sales agent:\s*(.+)$/i.exec(prompt)?.[1]?.trim().replace(/\.$/, "");
+  if (!company && !product && !goal) return null;
+  return { company, product, goal };
+}
+
 function heuristicFallback(prompt: string) {
+  const structured = parseStructuredPrompt(prompt);
+  const companyName = structured?.company || "Your Company";
+  const description = structured?.product ? `Sells: ${structured.product}.` : prompt.slice(0, 500);
+  const primaryObjective = structured?.goal || prompt.slice(0, 500);
+
   return configShapeSchema.parse({
     identity: {
       name: "Sales Assistant",
-      companyName: "Your Company",
+      companyName,
       role: "Sales Development Representative",
-      description: prompt.slice(0, 500),
+      description,
       language: "en",
       tone: "professional",
       personality: [],
     },
     playbook: {
-      primaryObjective: prompt.slice(0, 500),
+      primaryObjective,
+      targetCustomer: structured?.product ? `Prospects interested in: ${structured.product}` : undefined,
       qualificationCriteria: [
         { name: "Need", description: "Does the visitor have a real problem this product solves?" },
         { name: "Budget", description: "Can they realistically afford this?" },

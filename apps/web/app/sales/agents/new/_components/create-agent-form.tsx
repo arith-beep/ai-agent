@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Check, Loader2, Sparkles, Wand2 } from "lucide-react";
 
 type Mode = "ai" | "manual";
+type Phase = "form" | "assembling" | "review" | "error";
 
 interface GeneratedConfig {
   identity: { name: string; companyName: string; role: string; description?: string; language: string; tone: string; personality: string[] };
@@ -11,28 +14,33 @@ interface GeneratedConfig {
   guardrails: Record<string, unknown>;
 }
 
+const ASSEMBLY_STEPS = ["Understanding your company...", "Building your sales playbook...", "Creating qualification criteria...", "Preparing guardrails..."];
+
 export function CreateAgentForm() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("ai");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // AI mode
   const [prompt, setPrompt] = useState("");
-  const [generating, setGenerating] = useState(false);
+  const [phase, setPhase] = useState<Phase>("form");
+  const [assemblyStep, setAssemblyStep] = useState(0);
   const [generated, setGenerated] = useState<GeneratedConfig | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  // Manual mode
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [role, setRole] = useState("Sales Development Representative");
   const [objective, setObjective] = useState("");
 
   async function handleGenerate() {
-    setGenerating(true);
+    setPhase("assembling");
     setError(null);
     setNote(null);
+    setAssemblyStep(0);
+
+    const stepTimer = setInterval(() => setAssemblyStep((s) => Math.min(s + 1, ASSEMBLY_STEPS.length - 1)), 900);
+
     try {
       const res = await fetch("/api/sales/agents/generate", {
         method: "POST",
@@ -41,12 +49,15 @@ export function CreateAgentForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed.");
+      clearInterval(stepTimer);
+      setAssemblyStep(ASSEMBLY_STEPS.length);
       setGenerated(data.config);
       if (!data.aiGenerated) setNote(data.note);
+      setTimeout(() => setPhase("review"), 700);
     } catch (e) {
+      clearInterval(stepTimer);
       setError(e instanceof Error ? e.message : "Generation failed.");
-    } finally {
-      setGenerating(false);
+      setPhase("error");
     }
   }
 
@@ -88,106 +99,169 @@ export function CreateAgentForm() {
     }
   }
 
+  if (phase === "assembling" || (phase === "error" && mode === "ai")) {
+    return (
+      <div className="mx-auto max-w-md text-center">
+        <h1 className="font-display text-[22px] font-semibold tracking-tight text-fg">Building your agent</h1>
+        <div className="mt-8 space-y-3 text-left">
+          {ASSEMBLY_STEPS.map((label, i) => {
+            const done = i < assemblyStep || assemblyStep >= ASSEMBLY_STEPS.length;
+            const active = i === assemblyStep && phase === "assembling";
+            return (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: i <= assemblyStep || assemblyStep >= ASSEMBLY_STEPS.length ? 1 : 0.35, x: 0 }}
+                className="flex items-center gap-3 rounded-pnl border border-hairline bg-panel px-4 py-3"
+              >
+                {done ? (
+                  <Check size={16} className="text-positive" strokeWidth={2.5} />
+                ) : active ? (
+                  <Loader2 size={16} className="animate-spin text-brand" />
+                ) : (
+                  <span className="h-4 w-4 rounded-full border border-hairline" />
+                )}
+                <span className={`text-[13.5px] ${done ? "text-fg" : "text-fg-muted"}`}>{label}</span>
+              </motion.div>
+            );
+          })}
+        </div>
+        {phase === "error" && (
+          <div className="mt-6 space-y-3">
+            <p className="text-[13px] text-critical">{error}</p>
+            <button type="button" className="btn-outline" onClick={() => setPhase("form")}>
+              Back to setup
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (phase === "review" && generated) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="surface space-y-4 p-6">
+        <div className="flex items-center gap-2 text-positive">
+          <Check size={16} strokeWidth={2.5} />
+          <span className="text-[13.5px] font-medium">Agent ready</span>
+        </div>
+
+        {note && <div className="rounded-pnl border border-caution/30 bg-caution-soft px-3 py-2 text-[12.5px] text-caution">{note}</div>}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="field-label">Agent name</label>
+            <input
+              className="field"
+              value={generated.identity.name}
+              onChange={(e) => setGenerated({ ...generated, identity: { ...generated.identity, name: e.target.value } })}
+            />
+          </div>
+          <div>
+            <label className="field-label">Company</label>
+            <input
+              className="field"
+              value={generated.identity.companyName}
+              onChange={(e) => setGenerated({ ...generated, identity: { ...generated.identity, companyName: e.target.value } })}
+            />
+          </div>
+        </div>
+        <p className="text-[12.5px] text-fg-faint">
+          A full playbook and guardrails have been drafted from your description — you&rsquo;ll be able to review and edit every field in the builder
+          before deploying.
+        </p>
+        {error && <div className="rounded-pnl border border-critical/30 bg-critical-soft px-3 py-2 text-[12.5px] text-critical">{error}</div>}
+        <div className="flex items-center gap-2">
+          <button type="button" className="btn-subtle" onClick={() => setPhase("form")}>
+            Start over
+          </button>
+          <button type="button" className="btn-brand gap-1.5" disabled={submitting} onClick={createFromGenerated}>
+            {submitting ? "Creating..." : "Open in Builder"}
+            <ArrowRight size={15} />
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      <div className="inline-flex rounded-md border border-border p-0.5">
+      <div className="inline-flex rounded-pnl border border-hairline bg-sunken p-0.5">
         <button
           type="button"
-          className={`rounded px-3 py-1.5 text-sm ${mode === "ai" ? "bg-surface-raised text-ink" : "text-ink-muted"}`}
+          className={`rounded-pnl px-3 py-1.5 text-[13px] transition-colors ${mode === "ai" ? "bg-panel text-fg shadow-elevate-sm" : "text-fg-muted"}`}
           onClick={() => setMode("ai")}
         >
           Describe it (AI)
         </button>
         <button
           type="button"
-          className={`rounded px-3 py-1.5 text-sm ${mode === "manual" ? "bg-surface-raised text-ink" : "text-ink-muted"}`}
+          className={`rounded-pnl px-3 py-1.5 text-[13px] transition-colors ${mode === "manual" ? "bg-panel text-fg shadow-elevate-sm" : "text-fg-muted"}`}
           onClick={() => setMode("manual")}
         >
           Start from scratch
         </button>
       </div>
 
-      {error && <div className="card border-danger/40 bg-danger/10 p-3 text-sm text-danger">{error}</div>}
+      {error && phase !== "review" && <div className="rounded-pnl border border-critical/30 bg-critical-soft px-3 py-2 text-[12.5px] text-critical">{error}</div>}
 
-      {mode === "ai" ? (
-        <div className="card space-y-4 p-5">
-          <div>
-            <label className="label">What should your sales agent do?</label>
+      <AnimatePresence mode="wait">
+        {mode === "ai" ? (
+          <motion.div key="ai" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="surface space-y-4 p-6">
+            <div className="flex items-center gap-1.5 text-brand">
+              <Sparkles size={14} />
+              <span className="text-[12px] font-medium uppercase tracking-wide">What should your sales agent do?</span>
+            </div>
             <textarea
-              className="input"
-              rows={4}
-              placeholder="Create an inbound sales agent for my SaaS company that answers product questions, qualifies leads, handles objections and books demos."
+              className="field min-h-[110px] text-[14.5px]"
+              placeholder="Build an inbound sales agent for our B2B SaaS. Qualify companies with 20+ employees, answer pricing questions and book demos."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
-          </div>
-          <button type="button" className="btn-secondary" disabled={generating || prompt.trim().length < 10} onClick={handleGenerate}>
-            {generating ? "Generating..." : "Generate configuration"}
-          </button>
-
-          {note && <div className="card border-warning/40 bg-warning/10 p-3 text-xs text-warning">{note}</div>}
-
-          {generated && (
-            <div className="space-y-3 border-t border-border-subtle pt-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <label className="label">Agent name</label>
-                  <input
-                    className="input"
-                    value={generated.identity.name}
-                    onChange={(e) => setGenerated({ ...generated, identity: { ...generated.identity, name: e.target.value } })}
-                  />
-                </div>
-                <div>
-                  <label className="label">Company</label>
-                  <input
-                    className="input"
-                    value={generated.identity.companyName}
-                    onChange={(e) => setGenerated({ ...generated, identity: { ...generated.identity, companyName: e.target.value } })}
-                  />
-                </div>
+            <button type="button" className="btn-brand gap-1.5" disabled={prompt.trim().length < 10} onClick={handleGenerate}>
+              <Wand2 size={15} />
+              Generate Agent
+            </button>
+          </motion.div>
+        ) : (
+          <motion.form
+            key="manual"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            onSubmit={createManual}
+            className="surface space-y-4 p-6"
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="field-label">Agent name</label>
+                <input className="field" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ava" />
               </div>
-              <p className="text-xs text-ink-faint">
-                A full playbook and guardrails have been drafted from your description — you'll be able to review and edit every field in the
-                builder before deploying.
-              </p>
-              <button type="button" className="btn-primary" disabled={submitting} onClick={createFromGenerated}>
-                {submitting ? "Creating..." : "Create Sales Agent"}
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <form onSubmit={createManual} className="card space-y-4 p-5">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Agent name</label>
-              <input className="input" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ava" />
+              <div>
+                <label className="field-label">Company</label>
+                <input className="field" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Acme Inc." />
+              </div>
             </div>
             <div>
-              <label className="label">Company</label>
-              <input className="input" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Acme Inc." />
+              <label className="field-label">Role</label>
+              <input className="field" required value={role} onChange={(e) => setRole(e.target.value)} />
             </div>
-          </div>
-          <div>
-            <label className="label">Role</label>
-            <input className="input" required value={role} onChange={(e) => setRole(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Primary objective</label>
-            <textarea
-              className="input"
-              rows={2}
-              value={objective}
-              onChange={(e) => setObjective(e.target.value)}
-              placeholder="Qualify inbound leads and book product demos."
-            />
-          </div>
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? "Creating..." : "Create Sales Agent"}
-          </button>
-        </form>
-      )}
+            <div>
+              <label className="field-label">Primary objective</label>
+              <textarea
+                className="field"
+                rows={2}
+                value={objective}
+                onChange={(e) => setObjective(e.target.value)}
+                placeholder="Qualify inbound leads and book product demos."
+              />
+            </div>
+            <button type="submit" className="btn-brand" disabled={submitting}>
+              {submitting ? "Creating..." : "Create Sales Agent"}
+            </button>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

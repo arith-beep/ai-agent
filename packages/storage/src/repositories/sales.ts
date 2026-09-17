@@ -602,6 +602,52 @@ export async function listRecentActivity(orgId: string, limit = 10): Promise<Rec
   return rows;
 }
 
+export interface AgentStatsRow {
+  agentId: string;
+  conversationCount: number;
+  qualifiedLeadCount: number;
+  lastActivityAt: Date | null;
+}
+
+/** Per-agent conversation/qualification counters for the Sales Agents list — real aggregates, no placeholders. */
+export async function getAgentStats(orgId: string): Promise<Record<string, AgentStatsRow>> {
+  const db = getDb();
+  const [conversationRows, leadRows] = await Promise.all([
+    db
+      .select({
+        agentId: schema.salesConversations.agentId,
+        n: count(),
+        lastActivityAt: sql<Date>`max(${schema.salesConversations.lastMessageAt})`,
+      })
+      .from(schema.salesConversations)
+      .where(and(eq(schema.salesConversations.orgId, orgId), eq(schema.salesConversations.isTest, false)))
+      .groupBy(schema.salesConversations.agentId),
+    db
+      .select({ agentId: schema.salesLeads.agentId, n: count() })
+      .from(schema.salesLeads)
+      .where(
+        and(
+          eq(schema.salesLeads.orgId, orgId),
+          inArray(schema.salesLeads.status, ["qualified", "meeting_requested", "meeting_booked"]),
+        ),
+      )
+      .groupBy(schema.salesLeads.agentId),
+  ]);
+
+  const result: Record<string, AgentStatsRow> = {};
+  for (const row of conversationRows) {
+    if (!row.agentId) continue;
+    result[row.agentId] = { agentId: row.agentId, conversationCount: row.n, qualifiedLeadCount: 0, lastActivityAt: row.lastActivityAt ?? null };
+  }
+  for (const row of leadRows) {
+    if (!row.agentId) continue;
+    const existing = result[row.agentId] ?? { agentId: row.agentId, conversationCount: 0, qualifiedLeadCount: 0, lastActivityAt: null };
+    existing.qualifiedLeadCount = row.n;
+    result[row.agentId] = existing;
+  }
+  return result;
+}
+
 export async function getSalesToolUsage(orgId: string) {
   const db = getDb();
   const rows = await db

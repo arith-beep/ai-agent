@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText, Globe, FileUp, Trash2, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 export interface KnowledgeSourceRow {
   id: string;
@@ -12,14 +13,19 @@ export interface KnowledgeSourceRow {
   createdAt: string;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-  pending: "bg-surface-raised text-ink-muted",
-  processing: "bg-warning/15 text-warning",
-  ready: "bg-success/15 text-success",
-  failed: "bg-danger/15 text-danger",
+const STATUS_META: Record<string, { icon: typeof Clock; className: string; label: string }> = {
+  pending: { icon: Clock, className: "bg-sunken text-fg-muted", label: "Pending" },
+  processing: { icon: Loader2, className: "bg-caution-soft text-caution", label: "Processing" },
+  ready: { icon: CheckCircle2, className: "bg-positive-soft text-positive", label: "Ready" },
+  failed: { icon: XCircle, className: "bg-critical-soft text-critical", label: "Failed" },
 };
 
 type AddMode = "text" | "url" | "pdf";
+const MODES: { key: AddMode; label: string; icon: typeof FileText }[] = [
+  { key: "text", label: "Paste text", icon: FileText },
+  { key: "url", label: "Website URL", icon: Globe },
+  { key: "pdf", label: "PDF upload", icon: FileUp },
+];
 
 export function KnowledgeTab({ agentId, initialSources }: { agentId: string; initialSources: KnowledgeSourceRow[] }) {
   const router = useRouter();
@@ -33,10 +39,7 @@ export function KnowledgeTab({ agentId, initialSources }: { agentId: string; ini
 
   async function refresh() {
     const res = await fetch(`/api/sales/agents/${agentId}/knowledge`);
-    if (res.ok) {
-      const data = await res.json();
-      setSources(data.sources);
-    }
+    if (res.ok) setSources((await res.json()).sources);
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -78,85 +81,95 @@ export function KnowledgeTab({ agentId, initialSources }: { agentId: string; ini
   }
 
   return (
-    <div className="space-y-4">
-      <div className="card p-5">
-        <h2 className="mb-3 text-sm font-medium text-ink">Add knowledge</h2>
-        {error && <div className="mb-3 rounded-md border border-danger/40 bg-danger/10 p-3 text-sm text-danger">{error}</div>}
-        <div className="mb-3 inline-flex rounded-md border border-border p-0.5">
-          {(["text", "url", "pdf"] as AddMode[]).map((m) => (
+    <div>
+      <div className="mb-5">
+        <h2 className="font-display text-[17px] font-semibold text-fg">Knowledge</h2>
+        <p className="mt-0.5 text-[13px] text-fg-muted">What your agent can answer from — it will say so rather than guess if this is empty.</p>
+      </div>
+
+      <div className="surface mb-5 p-5">
+        {error && <div className="mb-4 rounded-pnl border border-critical/30 bg-critical-soft px-3.5 py-2.5 text-[13px] text-critical">{error}</div>}
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          {MODES.map((m) => (
             <button
-              key={m}
+              key={m.key}
               type="button"
-              className={`rounded px-3 py-1 text-xs ${mode === m ? "bg-surface-raised text-ink" : "text-ink-muted"}`}
-              onClick={() => setMode(m)}
+              onClick={() => setMode(m.key)}
+              className={`flex flex-col items-center gap-1.5 rounded-pnl-lg border px-3 py-3.5 transition-colors duration-150 ${
+                mode === m.key ? "border-brand bg-brand-soft text-brand" : "border-hairline text-fg-muted hover:border-fg-faint hover:text-fg"
+              }`}
             >
-              {m === "text" ? "Paste text" : m === "url" ? "Website URL" : "PDF upload"}
+              <m.icon size={17} strokeWidth={1.75} />
+              <span className="text-[12px] font-medium">{m.label}</span>
             </button>
           ))}
         </div>
         <form onSubmit={handleAdd} className="space-y-3">
           {mode !== "pdf" && (
             <div>
-              <label className="label">Name</label>
-              <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Pricing FAQ" />
+              <label className="field-label">Name</label>
+              <input className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Pricing FAQ" />
             </div>
           )}
           {mode === "text" && (
             <div>
-              <label className="label">Content</label>
-              <textarea className="input" rows={6} required value={content} onChange={(e) => setContent(e.target.value)} />
+              <label className="field-label">Content</label>
+              <textarea className="field min-h-[120px]" required value={content} onChange={(e) => setContent(e.target.value)} />
             </div>
           )}
           {mode === "url" && (
             <div>
-              <label className="label">URL</label>
-              <input className="input" required type="url" value={content} onChange={(e) => setContent(e.target.value)} placeholder="https://example.com/pricing" />
-              <p className="mt-1 text-xs text-ink-faint">Fetched and indexed in the background — status updates below once ready.</p>
+              <label className="field-label">URL</label>
+              <input className="field" required type="url" value={content} onChange={(e) => setContent(e.target.value)} placeholder="https://example.com/pricing" />
+              <p className="mt-1.5 text-[11.5px] text-fg-faint">Fetched and indexed in the background — status updates below once ready.</p>
             </div>
           )}
           {mode === "pdf" && (
             <div>
-              <label className="label">PDF file</label>
-              <input
-                className="input"
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-              <p className="mt-1 text-xs text-ink-faint">Text is extracted at upload time — scanned/image-only PDFs aren't supported yet.</p>
+              <label className="field-label">PDF file</label>
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-pnl-lg border-2 border-dashed border-hairline px-4 py-8 text-center transition-colors hover:border-brand hover:bg-brand-soft/40">
+                <FileUp size={20} className="text-fg-faint" strokeWidth={1.5} />
+                <span className="text-[13px] text-fg-muted">{file ? file.name : "Drop a PDF here or click to browse"}</span>
+                <input className="hidden" type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              </label>
+              <p className="mt-1.5 text-[11.5px] text-fg-faint">Text is extracted at upload time — scanned/image-only PDFs aren&rsquo;t supported yet.</p>
             </div>
           )}
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? "Adding..." : "Add"}
+          <button type="submit" className="btn-brand" disabled={submitting}>
+            {submitting ? "Adding..." : "Add source"}
           </button>
         </form>
       </div>
 
-      <div className="card">
-        <div className="border-b border-border px-5 py-3 text-sm font-medium text-ink">Sources ({sources.length})</div>
+      <div className="surface">
+        <div className="border-b border-hairline px-5 py-3.5 text-[13.5px] font-medium text-fg">Sources ({sources.length})</div>
         {sources.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-ink-faint">
-            No knowledge yet — this agent will say it doesn't know rather than guessing until you add some.
-          </p>
+          <p className="px-5 py-10 text-center text-[13px] text-fg-faint">No knowledge yet.</p>
         ) : (
-          <div className="divide-y divide-border-subtle">
-            {sources.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-5 py-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm text-ink">{s.name}</div>
-                  <div className="text-[11px] text-ink-faint">
-                    {s.type} · added {new Date(s.createdAt).toLocaleDateString()}
-                    {s.errorMessage ? ` · ${s.errorMessage}` : ""}
+          <div className="divide-y divide-hairline-soft">
+            {sources.map((s) => {
+              const meta = STATUS_META[s.status] ?? STATUS_META.pending!;
+              return (
+                <div key={s.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                  <div className="min-w-0">
+                    <div className="truncate text-[13.5px] text-fg">{s.name}</div>
+                    <div className="text-[11.5px] text-fg-faint">
+                      {s.type} · added {new Date(s.createdAt).toLocaleDateString()}
+                      {s.errorMessage ? ` · ${s.errorMessage}` : ""}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2.5">
+                    <span className={`chip gap-1 ${meta.className}`}>
+                      <meta.icon size={11} className={s.status === "processing" ? "animate-spin" : ""} />
+                      {meta.label}
+                    </span>
+                    <button type="button" className="rounded-pnl p-1.5 text-fg-faint hover:bg-critical-soft hover:text-critical" onClick={() => handleDelete(s.id)}>
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className={`badge ${STATUS_STYLES[s.status]}`}>{s.status}</span>
-                  <button type="button" className="btn-ghost text-danger" onClick={() => handleDelete(s.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { SlidersHorizontal } from "lucide-react";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -43,8 +44,12 @@ export function LeadsFilterBar({ agents }: { agents: AgentOption[] }) {
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
+      <span className="flex items-center gap-1.5 text-[12px] font-medium text-fg-faint">
+        <SlidersHorizontal size={13} strokeWidth={1.75} />
+        Filter
+      </span>
       <select
-        className="input w-auto"
+        className="field w-auto min-w-[9rem] flex-none py-1.5 text-[13px]"
         value={searchParams.get("status") ?? ""}
         onChange={(e) => setParam("status", e.target.value)}
       >
@@ -55,7 +60,7 @@ export function LeadsFilterBar({ agents }: { agents: AgentOption[] }) {
         ))}
       </select>
       <select
-        className="input w-auto"
+        className="field w-auto min-w-[9rem] flex-none py-1.5 text-[13px]"
         value={searchParams.get("agentId") ?? ""}
         onChange={(e) => setParam("agentId", e.target.value)}
       >
@@ -67,7 +72,7 @@ export function LeadsFilterBar({ agents }: { agents: AgentOption[] }) {
         ))}
       </select>
       <select
-        className="input w-auto"
+        className="field w-auto min-w-[8rem] flex-none py-1.5 text-[13px]"
         value={searchParams.get("since") ?? ""}
         onChange={(e) => setParam("since", e.target.value)}
       >

@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X, ShieldCheck } from "lucide-react";
 import { TagListEditor } from "./tag-list-editor";
+import { SaveStatusIndicator } from "./save-status";
+import { useAutosave } from "../_hooks/use-autosave";
 
 export interface RequiredInfoEntry {
   action: string;
@@ -23,37 +26,41 @@ const AUTONOMY_OPTIONS: { value: GuardrailsValue["maxAutonomy"]; label: string; 
   { value: "full_autonomy", label: "Full autonomy", description: "Takes actions as soon as it has the information it needs." },
 ];
 
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="surface p-5">
+      <h3 className="text-[13.5px] font-semibold text-fg">{title}</h3>
+      <div className="mt-4 space-y-4">{children}</div>
+    </div>
+  );
+}
+
 function RequiredInfoEditor({ items, onChange }: { items: RequiredInfoEntry[]; onChange: (v: RequiredInfoEntry[]) => void }) {
   const [action, setAction] = useState("");
   const [fields, setFields] = useState("");
-
   return (
     <div>
       {items.length > 0 && (
-        <ul className="mb-2 space-y-1.5">
+        <ul className="mb-3 space-y-1.5">
           {items.map((item, i) => (
-            <li key={i} className="flex items-start justify-between rounded-md border border-border-subtle px-3 py-2 text-sm">
+            <li key={i} className="flex items-start justify-between gap-3 rounded-pnl border border-hairline bg-panel px-3.5 py-2.5">
               <div>
-                <div className="font-medium text-ink">Before: {item.action}</div>
-                <div className="text-xs text-ink-faint">Requires: {item.requiredFields.join(", ")}</div>
+                <div className="text-[13px] font-medium text-fg">Before: {item.action}</div>
+                <div className="text-[12px] text-fg-faint">Requires: {item.requiredFields.join(", ")}</div>
               </div>
-              <button type="button" className="btn-ghost text-danger" onClick={() => onChange(items.filter((_, idx) => idx !== i))}>
-                Remove
+              <button type="button" onClick={() => onChange(items.filter((_, idx) => idx !== i))} className="shrink-0 rounded-pnl p-1 text-fg-faint hover:bg-critical-soft hover:text-critical">
+                <X size={13} />
               </button>
             </li>
           ))}
         </ul>
       )}
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <input className="input" placeholder="Action (e.g. book a meeting)" value={action} onChange={(e) => setAction(e.target.value)} />
-        </div>
-        <div className="flex-1">
-          <input className="input" placeholder="Required fields, comma-separated" value={fields} onChange={(e) => setFields(e.target.value)} />
-        </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input className="field" placeholder="Action (e.g. book a meeting)" value={action} onChange={(e) => setAction(e.target.value)} />
+        <input className="field" placeholder="Required fields, comma-separated" value={fields} onChange={(e) => setFields(e.target.value)} />
         <button
           type="button"
-          className="btn-secondary shrink-0"
+          className="btn-outline shrink-0 px-3"
           onClick={() => {
             const requiredFields = fields.split(",").map((f) => f.trim()).filter(Boolean);
             if (!action.trim() || requiredFields.length === 0) return;
@@ -62,7 +69,7 @@ function RequiredInfoEditor({ items, onChange }: { items: RequiredInfoEntry[]; o
             setFields("");
           }}
         >
-          Add
+          <Plus size={14} />
         </button>
       </div>
     </div>
@@ -72,90 +79,82 @@ function RequiredInfoEditor({ items, onChange }: { items: RequiredInfoEntry[]; o
 export function GuardrailsTab({ agentId, initial }: { agentId: string; initial: GuardrailsValue }) {
   const router = useRouter();
   const [value, setValue] = useState(initial);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
-  async function save() {
-    setSaving(true);
-    setError(null);
-    setSaved(false);
+  const status = useAutosave(value, async (v) => {
     const res = await fetch(`/api/sales/agents/${agentId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ guardrails: value }),
+      body: JSON.stringify({ guardrails: v }),
     });
-    setSaving(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Failed to save.");
-      return;
+      throw new Error(body.error ?? "Failed to save.");
     }
-    setSaved(true);
+    setError(null);
     router.refresh();
-  }
+  });
 
   return (
-    <div className="space-y-4">
-      {error && <div className="card border-danger/40 bg-danger/10 p-3 text-sm text-danger">{error}</div>}
-
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Topics</h2>
+    <div>
+      <div className="mb-5 flex items-center justify-between">
         <div>
-          <label className="label">Can discuss</label>
-          <TagListEditor items={value.allowedTopics} onChange={(allowedTopics) => setValue({ ...value, allowedTopics })} placeholder="e.g. pricing tiers, integrations" />
+          <h2 className="font-display text-[17px] font-semibold text-fg">Guardrails</h2>
+          <p className="mt-0.5 text-[13px] text-fg-muted">Boundaries your agent will never cross, and when it should escalate.</p>
         </div>
-        <div>
-          <label className="label">Cannot discuss</label>
-          <TagListEditor items={value.disallowedTopics} onChange={(disallowedTopics) => setValue({ ...value, disallowedTopics })} placeholder="e.g. competitor comparisons" />
-        </div>
+        <SaveStatusIndicator status={status} />
       </div>
 
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Escalation &amp; claims</h2>
-        <div>
-          <label className="label">Escalate to a human when...</label>
-          <TagListEditor
-            items={value.escalationTriggers}
-            onChange={(escalationTriggers) => setValue({ ...value, escalationTriggers })}
-            placeholder="e.g. the lead is frustrated"
-          />
-        </div>
-        <div>
-          <label className="label">Claims it must never make</label>
-          <TagListEditor
-            items={value.prohibitedClaims}
-            onChange={(prohibitedClaims) => setValue({ ...value, prohibitedClaims })}
-            placeholder="e.g. guaranteed ROI figures"
-          />
-        </div>
-      </div>
+      {error && <div className="mb-4 rounded-pnl border border-critical/30 bg-critical-soft px-3.5 py-2.5 text-[13px] text-critical">{error}</div>}
 
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Required information before actions</h2>
-        <RequiredInfoEditor items={value.requiredInfoBeforeActions} onChange={(requiredInfoBeforeActions) => setValue({ ...value, requiredInfoBeforeActions })} />
-      </div>
+      <div className="space-y-5">
+        <Section title="Topics">
+          <div>
+            <label className="field-label">Can discuss</label>
+            <TagListEditor items={value.allowedTopics} onChange={(allowedTopics) => setValue({ ...value, allowedTopics })} placeholder="e.g. pricing tiers, integrations" />
+          </div>
+          <div>
+            <label className="field-label">Cannot discuss</label>
+            <TagListEditor items={value.disallowedTopics} onChange={(disallowedTopics) => setValue({ ...value, disallowedTopics })} placeholder="e.g. competitor comparisons" />
+          </div>
+        </Section>
 
-      <div className="card space-y-3 p-5">
-        <h2 className="text-sm font-medium text-ink">Maximum autonomy</h2>
-        <div className="space-y-2">
-          {AUTONOMY_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-start gap-3 rounded-md border border-border-subtle px-3 py-2 text-sm">
-              <input type="radio" className="mt-1" checked={value.maxAutonomy === opt.value} onChange={() => setValue({ ...value, maxAutonomy: opt.value })} />
-              <div>
-                <div className="font-medium text-ink">{opt.label}</div>
-                <div className="text-xs text-ink-faint">{opt.description}</div>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
+        <Section title="Escalation & claims">
+          <div>
+            <label className="field-label">Escalate to a human when...</label>
+            <TagListEditor items={value.escalationTriggers} onChange={(escalationTriggers) => setValue({ ...value, escalationTriggers })} placeholder="e.g. the lead is frustrated" />
+          </div>
+          <div>
+            <label className="field-label">Claims it must never make</label>
+            <TagListEditor items={value.prohibitedClaims} onChange={(prohibitedClaims) => setValue({ ...value, prohibitedClaims })} placeholder="e.g. guaranteed ROI figures" />
+          </div>
+        </Section>
 
-      <div className="flex items-center gap-3">
-        <button type="button" className="btn-primary" disabled={saving} onClick={save}>
-          {saving ? "Saving..." : "Save Guardrails"}
-        </button>
-        {saved && <span className="text-xs text-success">Saved.</span>}
+        <Section title="Required information before actions">
+          <RequiredInfoEditor items={value.requiredInfoBeforeActions} onChange={(requiredInfoBeforeActions) => setValue({ ...value, requiredInfoBeforeActions })} />
+        </Section>
+
+        <Section title="Maximum autonomy">
+          <div className="space-y-2">
+            {AUTONOMY_OPTIONS.map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-pnl border px-3.5 py-3 transition-colors duration-150 ${
+                  value.maxAutonomy === opt.value ? "border-brand bg-brand-soft" : "border-hairline hover:border-fg-faint"
+                }`}
+              >
+                <input type="radio" className="mt-1 accent-[rgb(var(--brand))]" checked={value.maxAutonomy === opt.value} onChange={() => setValue({ ...value, maxAutonomy: opt.value })} />
+                <div>
+                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-fg">
+                    {value.maxAutonomy === opt.value && <ShieldCheck size={13} className="text-brand" />}
+                    {opt.label}
+                  </div>
+                  <div className="text-[12px] text-fg-faint">{opt.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </Section>
       </div>
     </div>
   );
