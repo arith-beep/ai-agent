@@ -4,6 +4,7 @@ import { FlaskConical } from "lucide-react";
 import { requireCurrentContext } from "@/lib/session";
 import { salesRepo, toolsRepo } from "@ai-agent/storage";
 import { buildSalesSystemPrompt } from "@ai-agent/sales-agent";
+import { isQueueAvailable } from "@ai-agent/queue";
 import { salesPlaybookSchema, salesGuardrailsSchema } from "@ai-agent/shared-types";
 import { seedSalesTools } from "@ai-agent/tools";
 import { AgentStatusBadge } from "../../_components/status-badge";
@@ -90,6 +91,7 @@ export default async function SalesAgentBuilderPage({ params }: { params: Promis
         attachedTools={attached}
         availableTools={available}
         generatedSystemPrompt={generatedSystemPrompt}
+        urlIngestionAvailable={isQueueAvailable()}
       />
     </div>
   );

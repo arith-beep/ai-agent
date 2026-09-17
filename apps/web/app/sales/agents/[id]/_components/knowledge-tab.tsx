@@ -27,7 +27,15 @@ const MODES: { key: AddMode; label: string; icon: typeof FileText }[] = [
   { key: "pdf", label: "PDF upload", icon: FileUp },
 ];
 
-export function KnowledgeTab({ agentId, initialSources }: { agentId: string; initialSources: KnowledgeSourceRow[] }) {
+export function KnowledgeTab({
+  agentId,
+  initialSources,
+  urlIngestionAvailable,
+}: {
+  agentId: string;
+  initialSources: KnowledgeSourceRow[];
+  urlIngestionAvailable: boolean;
+}) {
   const router = useRouter();
   const [sources, setSources] = useState(initialSources);
   const [mode, setMode] = useState<AddMode>("text");
@@ -90,20 +98,32 @@ export function KnowledgeTab({ agentId, initialSources }: { agentId: string; ini
       <div className="surface mb-5 p-5">
         {error && <div className="mb-4 rounded-pnl border border-critical/30 bg-critical-soft px-3.5 py-2.5 text-[13px] text-critical">{error}</div>}
         <div className="mb-4 grid grid-cols-3 gap-2">
-          {MODES.map((m) => (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => setMode(m.key)}
-              className={`flex flex-col items-center gap-1.5 rounded-pnl-lg border px-3 py-3.5 transition-colors duration-150 ${
-                mode === m.key ? "border-brand bg-brand-soft text-brand" : "border-hairline text-fg-muted hover:border-fg-faint hover:text-fg"
-              }`}
-            >
-              <m.icon size={17} strokeWidth={1.75} />
-              <span className="text-[12px] font-medium">{m.label}</span>
-            </button>
-          ))}
+          {MODES.map((m) => {
+            const disabled = m.key === "url" && !urlIngestionAvailable;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                disabled={disabled}
+                title={disabled ? "Not available in this deployment (no background queue is configured)" : undefined}
+                onClick={() => !disabled && setMode(m.key)}
+                className={`flex flex-col items-center gap-1.5 rounded-pnl-lg border px-3 py-3.5 transition-colors duration-150 ${
+                  disabled
+                    ? "cursor-not-allowed border-hairline text-fg-faint opacity-50"
+                    : mode === m.key
+                      ? "border-brand bg-brand-soft text-brand"
+                      : "border-hairline text-fg-muted hover:border-fg-faint hover:text-fg"
+                }`}
+              >
+                <m.icon size={17} strokeWidth={1.75} />
+                <span className="text-[12px] font-medium">{m.label}</span>
+              </button>
+            );
+          })}
         </div>
+        {!urlIngestionAvailable && (
+          <p className="mb-4 -mt-2 text-[11.5px] text-fg-faint">Website URL isn&rsquo;t available in this deployment — no background queue is configured. Paste text or upload a PDF instead.</p>
+        )}
         <form onSubmit={handleAdd} className="space-y-3">
           {mode !== "pdf" && (
             <div>

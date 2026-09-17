@@ -4,6 +4,10 @@ import { salesRepo } from "@ai-agent/storage";
 import { runConversationTurn } from "@ai-agent/sales-agent";
 import { getApiContext } from "@/lib/api-session";
 
+// A conversation turn can involve multiple tool-calling round trips to the LLM
+// (see MAX_TOOL_STEPS in packages/sales-agent) — give it more room than Vercel's default.
+export const maxDuration = 60;
+
 const sendSchema = z.object({ message: z.string().min(1).max(4000) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

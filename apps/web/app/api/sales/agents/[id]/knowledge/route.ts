@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { salesRepo } from "@ai-agent/storage";
-import { getQueues } from "@ai-agent/queue";
+import { getQueues, isQueueAvailable } from "@ai-agent/queue";
 import { ingestSalesKnowledgeSource } from "@ai-agent/sales-agent";
 import { extractPdfBuffer } from "@ai-agent/rag";
 import { getApiContext } from "@/lib/api-session";
+
+// Text/PDF ingestion runs synchronously inline (chunk + embed), which can take a few
+// seconds for a large document — give it more room than Vercel's default.
+export const maxDuration = 60;
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
 const textOrUrlSchema = z.object({
@@ -77,6 +81,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       new URL(parsed.data.content);
     } catch {
       return NextResponse.json({ error: "content must be a valid URL for type=url" }, { status: 400 });
+    }
+    if (!isQueueAvailable()) {
+      return NextResponse.json(
+        { error: "Website URL knowledge sources are not available in this deployment (no background queue is configured). Use Paste text or PDF upload instead." },
+        { status: 501 },
+      );
     }
   }
 

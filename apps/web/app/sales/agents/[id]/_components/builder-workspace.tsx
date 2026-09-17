@@ -29,6 +29,7 @@ export function BuilderWorkspace({
   attachedTools,
   availableTools,
   generatedSystemPrompt,
+  urlIngestionAvailable,
 }: {
   agentId: string;
   agentName: string;
@@ -39,6 +40,7 @@ export function BuilderWorkspace({
   attachedTools: AttachedToolRow[];
   availableTools: AvailableToolRow[];
   generatedSystemPrompt: string;
+  urlIngestionAvailable: boolean;
 }) {
   const [section, setSection] = useState<SectionKey>("identity");
   const [promptOpen, setPromptOpen] = useState(false);
@@ -104,7 +106,7 @@ export function BuilderWorkspace({
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-4 pr-1">
         {section === "identity" && <IdentityTab agentId={agentId} initial={identity} />}
         {section === "playbook" && <PlaybookTab agentId={agentId} initial={playbook} />}
-        {section === "knowledge" && <KnowledgeTab agentId={agentId} initialSources={knowledgeSources} />}
+        {section === "knowledge" && <KnowledgeTab agentId={agentId} initialSources={knowledgeSources} urlIngestionAvailable={urlIngestionAvailable} />}
         {section === "tools" && <ToolsTab agentId={agentId} initialAttached={attachedTools} initialAvailable={availableTools} />}
         {section === "guardrails" && <GuardrailsTab agentId={agentId} initial={guardrails} />}
       </div>

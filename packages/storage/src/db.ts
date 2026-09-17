@@ -21,7 +21,10 @@ function getClient(): postgres.Sql {
   if (!globalThis.__aiAgentDbClient) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL is not set.");
-    globalThis.__aiAgentDbClient = postgres(url);
+    // prepare: false is required against a transaction-mode pooler (e.g. Supabase's
+    // pgbouncer on port 6543, the recommended connection for serverless) — it doesn't
+    // support prepared statements. Harmless against a direct connection too.
+    globalThis.__aiAgentDbClient = postgres(url, { prepare: false });
   }
   return globalThis.__aiAgentDbClient;
 }

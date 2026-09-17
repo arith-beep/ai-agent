@@ -5,6 +5,8 @@ import { salesAgentConfigSchema } from "@ai-agent/shared-types";
 import { resolveModel } from "@ai-agent/model-providers";
 import { getApiContext } from "@/lib/api-session";
 
+export const maxDuration = 60;
+
 const generateInputSchema = z.object({ prompt: z.string().min(10).max(2000) });
 
 const configShapeSchema = salesAgentConfigSchema.omit({ modelProvider: true, modelName: true, temperature: true, maxTokens: true });
