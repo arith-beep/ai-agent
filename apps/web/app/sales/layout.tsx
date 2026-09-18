@@ -1,6 +1,11 @@
 import { requireCurrentContext } from "@/lib/session";
 import { SalesSidebar } from "./_components/sidebar";
 
+// Always render per-request. Without this, DEMO_MODE's auth bypass (which touches no
+// cookies/headers) lets Next.js statically prerender these pages at build time, freezing
+// the in-memory demo data forever instead of reflecting live edits made during the demo.
+export const dynamic = "force-dynamic";
+
 export default async function SalesLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireCurrentContext();
 

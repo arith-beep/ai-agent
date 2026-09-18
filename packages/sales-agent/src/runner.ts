@@ -1,8 +1,9 @@
 import { streamText } from "ai";
-import { salesRepo } from "@ai-agent/storage";
+import { salesRepo, isDemoMode } from "@ai-agent/storage";
 import { resolveModel } from "@ai-agent/model-providers";
 import { buildSalesSystemPrompt } from "./system-prompt";
 import { buildSalesToolSet, type RunDebug } from "./tool-set";
+import { demoAssistantReply } from "./demo-reply";
 
 const MAX_TOOL_STEPS = 6;
 const FALLBACK_MESSAGE = "Sorry, something went wrong on my end. A team member has been notified.";
@@ -18,6 +19,8 @@ export interface ConversationTurnDebug extends RunDebug {
   latencyMs: number;
   model: string;
   error?: string;
+  /** True only in DEMO_MODE — the reply is a canned string, never a real LLM call. */
+  simulated?: boolean;
   lead: Awaited<ReturnType<typeof salesRepo.getLeadForConversation>>;
 }
 
@@ -41,6 +44,28 @@ export async function runConversationTurn(params: RunConversationTurnParams): Pr
   if (!agent) throw new Error(`Sales agent ${params.agentId} not found.`);
 
   await salesRepo.appendMessage({ conversationId: params.conversationId, role: "user", content: params.userMessage });
+
+  // DEMO_MODE: skip the real LLM call entirely — never fake a successful model response.
+  // The reply is clearly marked "[Simulated demo reply]" and debug.simulated is set so the
+  // Playground inspector can badge it. Production code path below is untouched.
+  if (isDemoMode()) {
+    const assistantText = demoAssistantReply(params.userMessage);
+    const debug: ConversationTurnDebug = {
+      retrievedChunks: [],
+      toolCalls: [],
+      latencyMs: Date.now() - startedAt,
+      model: `${agent.modelProvider}/${agent.modelName}`,
+      simulated: true,
+      lead: await salesRepo.getLeadForConversation(params.orgId, params.conversationId),
+    };
+    await salesRepo.appendMessage({
+      conversationId: params.conversationId,
+      role: "assistant",
+      content: assistantText,
+      debug: debug as unknown as Record<string, unknown>,
+    });
+    return { assistantText, debug };
+  }
 
   const debug: RunDebug = { retrievedChunks: [], toolCalls: [] };
   const modelLabel = `${agent.modelProvider}/${agent.modelName}`;
