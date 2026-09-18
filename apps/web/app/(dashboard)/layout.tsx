@@ -1,6 +1,11 @@
 import { requireCurrentContext } from "@/lib/session";
 import { Sidebar } from "./_components/sidebar";
 
+// Same reasoning as apps/web/app/sales/layout.tsx: DEMO_MODE's auth bypass touches no
+// cookies/headers, so without this Next.js statically prerenders these pages at build
+// time — including their DB reads, which fail the whole build if DATABASE_URL is bad.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireCurrentContext();
 
