@@ -5,6 +5,7 @@ import { startDeliverAgentMessageWorker } from "./workers/deliver-agent-message"
 import { startScheduledTriggerWorker } from "./workers/scheduled-trigger";
 import { startEmbedMemoryWorker } from "./workers/embed-memory";
 import { startIngestKnowledgeDocumentWorker } from "./workers/ingest-knowledge-document";
+import { startIngestSalesKnowledgeWorker } from "./workers/ingest-sales-knowledge";
 
 const workers = [
   startAgentRunWorker(),
@@ -14,6 +15,7 @@ const workers = [
   startScheduledTriggerWorker(),
   startEmbedMemoryWorker(),
   startIngestKnowledgeDocumentWorker(),
+  startIngestSalesKnowledgeWorker(),
 ];
 
 console.log(`AI Agent Platform worker started: ${workers.length} queue processors running.`);

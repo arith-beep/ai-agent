@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&display=swap");
 
 :root {
   color-scheme: dark;
@@ -38,4 +38,117 @@ body {
   .badge {
     @apply inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium;
   }
+}
+
+/* ==========================================================================
+   Sales Agent Builder design system
+   Scoped to its own CSS variables + component classes so the internal
+   workforce platform above (fixed hex values, no light mode) is completely
+   unaffected. Light is the default; `.dark` (toggled by next-themes on
+   <html>) swaps the palette. Every new page sets its own bg-paper/text-fg
+   wrapper rather than relying on the shared `body` rule above.
+   ========================================================================== */
+
+:root {
+  /* Colors as "R G B" triplets (not hex) so Tailwind's rgb(var(--x) / <alpha-value>)
+     wiring in tailwind.config.ts can apply opacity modifiers like bg-brand/40. */
+  --paper: 255 255 255;
+  --panel: 255 255 255;
+  --panel-hover: 247 248 250;
+  --sunken: 245 246 248;
+  --hairline: 230 232 235;
+  --hairline-soft: 238 240 242;
+  --fg: 12 14 19;
+  --fg-muted: 86 92 102;
+  --fg-faint: 144 149 158;
+  --brand: 36 84 236;
+  --brand-hover: 28 65 196;
+  --brand-active: 22 53 159;
+  --brand-soft: 238 242 254;
+  --brand-on: 255 255 255;
+  --positive: 15 138 79;
+  --positive-soft: 231 245 236;
+  --caution: 168 113 15;
+  --caution-soft: 251 241 222;
+  --critical: 207 63 52;
+  --critical-soft: 251 234 232;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(16, 24, 40, 0.10), 0 2px 6px -2px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 24px 48px -16px rgba(16, 24, 40, 0.18), 0 6px 12px -4px rgba(16, 24, 40, 0.06);
+  --ease-premium: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark {
+  --paper: 10 11 13;
+  --panel: 19 21 25;
+  --panel-hover: 25 28 33;
+  --sunken: 8 9 11;
+  --hairline: 36 39 45;
+  --hairline-soft: 27 29 34;
+  --fg: 242 243 245;
+  --fg-muted: 162 167 177;
+  --fg-faint: 103 108 117;
+  --brand: 109 141 255;
+  --brand-hover: 135 161 255;
+  --brand-active: 163 184 255;
+  --brand-soft: 22 32 63;
+  --brand-on: 255 255 255;
+  --positive: 63 197 132;
+  --positive-soft: 16 42 28;
+  --caution: 226 178 90;
+  --caution-soft: 46 36 16;
+  --critical: 239 116 105;
+  --critical-soft: 57 31 28;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 20px -6px rgba(0, 0, 0, 0.45), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 28px 56px -18px rgba(0, 0, 0, 0.6), 0 8px 16px -6px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-brand {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-pnl bg-brand px-4 py-2 text-sm font-medium text-brand-on shadow-elevate-sm transition-all duration-150 ease-premium hover:bg-brand-hover hover:shadow-elevate-md active:bg-brand-active disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-pnl border border-hairline bg-panel px-4 py-2 text-sm font-medium text-fg transition-all duration-150 ease-premium hover:border-fg-faint hover:bg-panel-hover disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-subtle {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-pnl px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors duration-150 ease-premium hover:bg-sunken hover:text-fg disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Surfaces */
+  .surface {
+    @apply rounded-pnl-lg border border-hairline bg-panel;
+  }
+  .surface-sunken {
+    @apply rounded-pnl border border-hairline bg-sunken;
+  }
+
+  /* Form controls */
+  .field {
+    @apply w-full rounded-pnl border border-hairline bg-panel px-3 py-2 text-sm text-fg placeholder:text-fg-faint transition-colors duration-150 ease-premium focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-fg-muted;
+  }
+
+  /* Chips / status */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 }

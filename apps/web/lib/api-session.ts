@@ -1,9 +1,12 @@
 import { auth } from "./auth";
 import { tenancyRepo } from "@ai-agent/storage";
 import type { CurrentContext } from "./session";
+import { DEMO_CONTEXT, isDemoMode } from "./demo";
 
 /** Same resolution as requireCurrentContext(), but returns null instead of redirecting — for use in API route handlers. */
 export async function getApiContext(): Promise<CurrentContext | null> {
+  if (isDemoMode()) return DEMO_CONTEXT;
+
   const session = await auth();
   if (!session?.user?.id) return null;
 

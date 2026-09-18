@@ -4,6 +4,8 @@ export interface ToolContext {
   orgId: string;
   agentId?: string;
   authConfig?: Record<string, unknown>;
+  /** Set when a tool runs inside a Sales Agent conversation turn — see packages/sales-agent's tool-set. */
+  conversationId?: string;
 }
 
 export interface BuiltinToolImplementation<TInput = unknown, TOutput = unknown> {
