@@ -285,7 +285,29 @@ export const demoSalesRepo = {
     return conversation;
   },
   async getConversation(orgId: string, conversationId: string) {
-    return state().conversations.find((c) => c.id === conversationId && c.orgId === orgId);
+    const s = state();
+    const existing = s.conversations.find((c) => c.id === conversationId && c.orgId === orgId);
+    if (existing) return existing;
+    // Each Next.js API route is its own serverless function on Vercel, so the in-memory
+    // demo state created by POST /api/sales/agents/[id]/playground (a "new test session")
+    // never exists in the separate function backing POST .../messages. Self-heal by
+    // synthesizing the ad-hoc test conversation here rather than 404ing every send.
+    if (orgId === DEMO_ORG_ID && conversationId.startsWith("conv-")) {
+      const conversation = {
+        id: conversationId,
+        orgId,
+        agentId: AGENT_ID,
+        leadId: null as string | null,
+        channel: "playground",
+        status: "active",
+        isTest: true,
+        startedAt: now(),
+        lastMessageAt: now(),
+      };
+      s.conversations.push(conversation);
+      return conversation;
+    }
+    return undefined;
   },
   async listConversations(orgId: string, filters: { agentId?: string; status?: string; excludeTest?: boolean } = {}) {
     if (orgId !== DEMO_ORG_ID) return [];
