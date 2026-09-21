@@ -43,6 +43,13 @@
       "when": 1789642024773,
       "tag": "0005_blue_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790029886448,
+      "tag": "0006_loose_eddie_brock",
+      "breakpoints": true
     }
   ]
 }

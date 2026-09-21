@@ -12,3 +12,4 @@ export * from "./scheduling";
 export * from "./credentials";
 export * from "./audit";
 export * from "./sales";
+export * from "./manager";

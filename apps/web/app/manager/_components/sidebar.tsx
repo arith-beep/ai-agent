@@ -3,42 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  LayoutDashboard,
-  Bot,
-  Users,
-  MessagesSquare,
-  BookOpen,
-  Plug,
-  BarChart3,
-  Settings,
-  Menu,
-  X,
-  LogOut,
-  UserCog,
-} from "lucide-react";
-import { ThemeToggle } from "./theme-toggle";
+import { LayoutDashboard, Users, ListChecks, ShieldAlert, Target, Menu, X, LogOut } from "lucide-react";
+import { ThemeToggle } from "../../sales/_components/theme-toggle";
 import { logoutAction } from "@/lib/actions/auth-actions";
 
 const NAV_ITEMS = [
-  { href: "/sales", label: "Overview", icon: LayoutDashboard },
-  { href: "/sales/agents", label: "Sales Agents", icon: Bot },
-  { href: "/sales/leads", label: "Leads", icon: Users },
-  { href: "/sales/conversations", label: "Conversations", icon: MessagesSquare },
-  { href: "/sales/knowledge", label: "Knowledge", icon: BookOpen },
-  { href: "/sales/integrations", label: "Integrations", icon: Plug },
-  { href: "/sales/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/manager", label: "Sales Manager", icon: UserCog },
-  { href: "/sales/settings", label: "Settings", icon: Settings },
+  { href: "/manager", label: "Overview", icon: LayoutDashboard },
+  { href: "/manager/reps", label: "Team Roster", icon: Users },
+  { href: "/manager/threads", label: "Open Threads", icon: ListChecks },
+  { href: "/manager/compliance", label: "Compliance", icon: ShieldAlert },
+  { href: "/manager/focus", label: "Weekly Focus", icon: Target },
 ] as const;
 
 function Brand({ orgName }: { orgName: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-fg text-[13px] font-semibold text-paper">S</span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-fg text-[13px] font-semibold text-paper">M</span>
       <div className="min-w-0">
         <div className="truncate text-[13.5px] font-medium text-fg">{orgName}</div>
-        <div className="text-[11px] text-fg-faint">Sales Agent Builder</div>
+        <div className="text-[11px] text-fg-faint">AI Sales Manager</div>
       </div>
     </div>
   );
@@ -48,7 +31,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   return (
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
       {NAV_ITEMS.map((item) => {
-        const active = item.href === "/sales" ? pathname === "/sales" : pathname.startsWith(item.href);
+        const active = item.href === "/manager" ? pathname === "/manager" : pathname.startsWith(item.href);
         return (
           <Link
             key={item.href}
@@ -67,7 +50,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-export function SalesSidebar({ orgName }: { orgName: string }) {
+export function ManagerSidebar({ orgName }: { orgName: string }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -109,8 +92,8 @@ export function SalesSidebar({ orgName }: { orgName: string }) {
             </div>
             <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
             <div className="flex items-center justify-between border-t border-hairline px-4 py-3">
-              <Link href="/platform" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
-                ← Agent Platform
+              <Link href="/sales" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
+                ← Sales Agents
               </Link>
               <form action={logoutAction}>
                 <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted">
@@ -130,8 +113,8 @@ export function SalesSidebar({ orgName }: { orgName: string }) {
         </div>
         <NavLinks pathname={pathname} />
         <div className="flex items-center justify-between border-t border-hairline px-4 py-3">
-          <Link href="/platform" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
-            ← Agent Platform
+          <Link href="/sales" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
+            ← Sales Agents
           </Link>
           <form action={logoutAction}>
             <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" title="Log out">

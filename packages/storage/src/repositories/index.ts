@@ -11,6 +11,7 @@ export * as policyRepo from "./policy";
 export * as schedulingRepo from "./scheduling";
 export * as credentialsRepo from "./credentials";
 export * as auditRepo from "./audit";
+export * as managerRepo from "./manager";
 import * as salesRepoReal from "./sales";
 import { isDemoMode } from "../demo/config";
 import { demoSalesRepo, demoToolsRepo } from "../demo/store";
