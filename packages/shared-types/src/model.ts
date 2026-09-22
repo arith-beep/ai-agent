@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const modelProviders = ["openai", "anthropic", "google"] as const;
+export const modelProviders = ["openai", "anthropic", "google", "openrouter"] as const;
 export type ModelProvider = (typeof modelProviders)[number];
 
 export const modelProviderSchema = z.enum(modelProviders);

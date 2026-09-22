@@ -7,6 +7,7 @@ const PROVIDERS = [
   { id: "openai", label: "OpenAI", envHint: "OPENAI_API_KEY" },
   { id: "anthropic", label: "Anthropic", envHint: "ANTHROPIC_API_KEY" },
   { id: "google", label: "Google", envHint: "GOOGLE_GENERATIVE_AI_API_KEY" },
+  { id: "openrouter", label: "OpenRouter", envHint: "OPENROUTER_API_KEY" },
 ] as const;
 
 export function CredentialForm({ configured }: { configured: string[] }) {

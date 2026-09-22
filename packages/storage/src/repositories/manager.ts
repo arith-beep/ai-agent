@@ -1,4 +1,5 @@
 import { and, eq, gte } from "drizzle-orm";
+import type { ModelProvider } from "@ai-agent/shared-types";
 import { getDb, schema } from "../db";
 
 /**
@@ -312,7 +313,7 @@ export async function getManagerAgentConfig(orgId: string) {
   return db.query.managerAgentConfig.findFirst({ where: eq(schema.managerAgentConfig.orgId, orgId) });
 }
 
-export async function setManagerAgentConfig(input: { orgId: string; modelProvider: "openai" | "anthropic" | "google"; modelName: string; updatedByUserId?: string }) {
+export async function setManagerAgentConfig(input: { orgId: string; modelProvider: ModelProvider; modelName: string; updatedByUserId?: string }) {
   const db = getDb();
   const [config] = await db
     .insert(schema.managerAgentConfig)
@@ -331,7 +332,7 @@ export async function createManagerBrief(input: {
   orgId: string;
   type: "morning_brief" | "coaching_prep" | "eod_report";
   repId?: string;
-  modelProvider: "openai" | "anthropic" | "google";
+  modelProvider: ModelProvider;
   modelName: string;
   content: Record<string, unknown>;
   evidenceRepIds?: string[];

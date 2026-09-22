@@ -81,7 +81,10 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
             description: agent.description ?? undefined,
             objective: agent.objective ?? undefined,
             systemPrompt: agent.systemPrompt,
-            modelProvider: agent.modelProvider,
+            // This builder's provider dropdown only offers the three original providers;
+            // OpenRouter isn't wired into it, so fall back to undefined (defaults to
+            // "openai" in the form) rather than passing a value it can't render.
+            modelProvider: agent.modelProvider === "openrouter" ? undefined : agent.modelProvider,
             modelName: agent.modelName,
             temperature: agent.temperature,
             maxTokens: agent.maxTokens,

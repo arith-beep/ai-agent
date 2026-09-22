@@ -9,7 +9,10 @@ const ENV_VAR_BY_PROVIDER: Record<ModelProvider, string> = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
   google: "GOOGLE_GENERATIVE_AI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
 };
+
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 async function getApiKey(orgId: string, provider: ModelProvider): Promise<string> {
   const fromDb = await credentialsRepo.getDecryptedApiKey(orgId, provider);
@@ -41,6 +44,11 @@ export async function resolveModel(orgId: string, ref: { provider: ModelProvider
       return createAnthropic({ apiKey })(ref.model);
     case "google":
       return createGoogleGenerativeAI({ apiKey })(ref.model);
+    case "openrouter":
+      // OpenRouter exposes an OpenAI-compatible chat completions endpoint that
+      // proxies to many upstream models; "compatible" mode relaxes the strict
+      // OpenAI-only response validation the AI SDK otherwise applies.
+      return createOpenAI({ apiKey, baseURL: OPENROUTER_BASE_URL, compatibility: "compatible" })(ref.model);
     default: {
       const exhaustive: never = ref.provider;
       throw new Error(`Unsupported model provider: ${exhaustive}`);

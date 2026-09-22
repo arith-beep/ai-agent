@@ -14,10 +14,11 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-const PROVIDER_ENV_VAR: Record<"openai" | "anthropic" | "google", string> = {
+const PROVIDER_ENV_VAR: Record<"openai" | "anthropic" | "google" | "openrouter", string> = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
   google: "GOOGLE_GENERATIVE_AI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
 };
 
 export default async function ManagerOverviewPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -39,7 +40,7 @@ export default async function ManagerOverviewPage({ searchParams }: { searchPara
   // OR a server-side env var is set for local dev / a shared deployment key — the same
   // two sources resolveModel() itself checks, so the dropdown never offers a provider
   // that would immediately fail as "credential missing".
-  const availableProviders = (["openai", "anthropic", "google"] as const).filter(
+  const availableProviders = (["openai", "anthropic", "google", "openrouter"] as const).filter(
     (p) => configuredCredentials.some((c) => c.provider === p) || Boolean(process.env[PROVIDER_ENV_VAR[p]]),
   );
 
@@ -111,6 +112,16 @@ export default async function ManagerOverviewPage({ searchParams }: { searchPara
                   Save
                 </button>
               </form>
+              {availableProviders.includes("openrouter") && (
+                <p className="mt-2 text-[12px] text-fg-muted">
+                  If using OpenRouter, model names are vendor-prefixed, e.g. <code className="font-mono">openai/gpt-4o-mini</code> or{" "}
+                  <code className="font-mono">anthropic/claude-3.5-sonnet</code> — see{" "}
+                  <a href="https://openrouter.ai/models" target="_blank" rel="noreferrer" className="underline">
+                    openrouter.ai/models
+                  </a>
+                  .
+                </p>
+              )}
             </div>
           )
         ) : (
