@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-agent/auth": "workspace:*",
     "@ai-agent/crypto": "workspace:*",
+    "@ai-agent/manager-agent": "workspace:*",
     "@ai-agent/message-bus": "workspace:*",
     "@ai-agent/model-providers": "workspace:*",
     "@ai-agent/observability": "workspace:*",

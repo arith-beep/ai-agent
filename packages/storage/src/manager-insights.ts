@@ -1,8 +1,10 @@
 /**
- * Pure, presentation-layer heuristics over already-fetched snapshot rows —
- * deliberately NOT in the repo layer, since these are directional signals
- * for a manager to investigate (per the roleplay: "one bad day is noise,
- * three is a signal"), not authoritative business calculations.
+ * Pure heuristics over already-fetched snapshot rows — shared by the
+ * dashboard UI (apps/web/app/manager) and the Manager Agent's read-only
+ * tools (packages/manager-agent), so both compute identical numbers for
+ * the same rep. These are directional signals for a manager (or the agent
+ * preparing material for one) to investigate — per the roleplay, "one bad
+ * day is noise, three is a signal" — never an authoritative verdict.
  */
 
 export interface Snapshot {

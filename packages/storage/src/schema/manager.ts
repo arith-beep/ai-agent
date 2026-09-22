@@ -1,5 +1,6 @@
-import { pgTable, uuid, text, integer, boolean, timestamp, pgEnum, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, boolean, timestamp, jsonb, pgEnum, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { organizations, users } from "./tenancy";
+import { modelProviderEnum } from "./agents";
 
 /**
  * AI Sales Manager domain — distinct from `sales_agents` (the customer-facing
@@ -147,3 +148,54 @@ export const teamFocusAreas = pgTable("team_focus_areas", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Milestone 2 — the Manager Agent (LLM reasoning over the tables above).
+ *
+ * `manager_agent_config` is a deliberate, explicit per-org choice of which
+ * provider/model the Manager Agent uses — NOT inferred by picking whichever
+ * provider happens to have a credential configured. One row per org; absence
+ * of a row means "not configured yet," which callers must treat as a real
+ * state to show the user, never silently defaulted.
+ */
+export const managerAgentConfig = pgTable("manager_agent_config", {
+  orgId: uuid("org_id")
+    .primaryKey()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  modelProvider: modelProviderEnum("model_provider").notNull(),
+  modelName: text("model_name").notNull(),
+  updatedByUserId: uuid("updated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const managerBriefTypeEnum = pgEnum("manager_brief_type", ["morning_brief", "coaching_prep", "eod_report"]);
+
+/**
+ * Persisted Manager Agent output — the operational memory that gives the
+ * agent continuity between days ("what did I say yesterday"), and the
+ * manager a real history to look back on. `content` is the validated,
+ * citation-checked structured output (see packages/manager-agent/src/validate.ts);
+ * `evidenceRepIds`/`evidenceCaseIds`/`evidenceThreadIds` record exactly which
+ * real rows backed it, so a claim can always be traced back to source data.
+ */
+export const managerBriefs = pgTable(
+  "manager_briefs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    type: managerBriefTypeEnum("type").notNull(),
+    repId: uuid("rep_id").references(() => salesReps.id, { onDelete: "cascade" }),
+    modelProvider: modelProviderEnum("model_provider").notNull(),
+    modelName: text("model_name").notNull(),
+    content: jsonb("content").$type<Record<string, unknown>>().notNull(),
+    evidenceRepIds: jsonb("evidence_rep_ids").$type<string[]>().notNull().default([]),
+    evidenceCaseIds: jsonb("evidence_case_ids").$type<string[]>().notNull().default([]),
+    evidenceThreadIds: jsonb("evidence_thread_ids").$type<string[]>().notNull().default([]),
+    droppedClaimsCount: integer("dropped_claims_count").notNull().default(0),
+    generatedAt: timestamp("generated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("manager_briefs_org_type_idx").on(table.orgId, table.type, table.generatedAt), index("manager_briefs_rep_idx").on(table.repId)],
+);

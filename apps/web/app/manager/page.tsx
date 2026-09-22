@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { ShieldAlert, ListChecks, TrendingUp, TrendingDown, Users, Target, ArrowUpRight } from "lucide-react";
+import { ShieldAlert, ListChecks, TrendingUp, TrendingDown, Users, Target, ArrowUpRight, Sparkles, AlertTriangle } from "lucide-react";
 import { requireManagerAccess } from "@/lib/manager-access";
-import { managerRepo } from "@ai-agent/storage";
+import { managerRepo, managerInsights, credentialsRepo } from "@ai-agent/storage";
+import type { MorningBrief } from "@ai-agent/manager-agent";
 import { RepStatusBadge, ComplianceSeverityBadge } from "./_components/badges";
-import { analyzeRepTrend, groupByRep } from "./_lib/insights";
+import { ManagerBriefView } from "./_components/manager-brief-view";
+import { setManagerAgentConfigAction, generateMorningBriefAction } from "@/lib/actions/manager-agent-actions";
 
 function daysAgo(n: number): Date {
   const d = new Date();
@@ -12,21 +14,39 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-export default async function ManagerOverviewPage() {
-  const ctx = await requireManagerAccess();
+const PROVIDER_ENV_VAR: Record<"openai" | "anthropic" | "google", string> = {
+  openai: "OPENAI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  google: "GOOGLE_GENERATIVE_AI_API_KEY",
+};
 
-  const [reps, openCompliance, openThreads, currentFocus, snapshots] = await Promise.all([
+export default async function ManagerOverviewPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const ctx = await requireManagerAccess();
+  const { error } = await searchParams;
+
+  const [reps, openCompliance, openThreads, currentFocus, snapshots, agentConfig, configuredCredentials, latestBrief] = await Promise.all([
     managerRepo.listReps(ctx.orgId, { status: "active" }),
     managerRepo.listComplianceCases(ctx.orgId, { status: "open" }),
     managerRepo.listOpenThreads(ctx.orgId, { status: "open" }),
     managerRepo.getCurrentFocusArea(ctx.orgId),
     managerRepo.listSnapshotsForOrg(ctx.orgId, daysAgo(14)),
+    managerRepo.getManagerAgentConfig(ctx.orgId),
+    credentialsRepo.listConfiguredProviders(ctx.orgId),
+    managerRepo.getLatestBrief(ctx.orgId, "morning_brief"),
   ]);
 
+  // A provider is offered in the config form if this org has a stored credential for it,
+  // OR a server-side env var is set for local dev / a shared deployment key — the same
+  // two sources resolveModel() itself checks, so the dropdown never offers a provider
+  // that would immediately fail as "credential missing".
+  const availableProviders = (["openai", "anthropic", "google"] as const).filter(
+    (p) => configuredCredentials.some((c) => c.provider === p) || Boolean(process.env[PROVIDER_ENV_VAR[p]]),
+  );
+
   const repById = new Map(reps.map((r) => [r.id, r]));
-  const byRep = groupByRep(snapshots);
+  const byRep = managerInsights.groupByRep(snapshots);
   const insights = reps
-    .map((r) => analyzeRepTrend(byRep.get(r.id) ?? []))
+    .map((r) => managerInsights.analyzeRepTrend(byRep.get(r.id) ?? []))
     .filter((i): i is NonNullable<typeof i> => i !== null);
 
   const needsAttention = insights.filter((i) => i.flag === "below_own_baseline" || i.flag === "zero_recent_output");
@@ -48,6 +68,72 @@ export default async function ManagerOverviewPage() {
       <div className="mb-7">
         <h1 className="font-display text-[22px] font-semibold tracking-tight text-fg">Sales Manager</h1>
         <p className="mt-1 text-[13.5px] text-fg-muted">Ranked by what needs attention — compliance first, then individual signals, then recognition.</p>
+      </div>
+
+      {error && (
+        <div className="mb-5 flex items-start gap-2 rounded-pnl border border-critical/30 bg-critical-soft px-3.5 py-2.5 text-[13px] text-critical">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Manager Agent — draft-only, human-approved; see card body for the guardrail note */}
+      <div className="surface mb-5 p-5">
+        <div className="mb-3 flex items-center gap-2 text-fg">
+          <Sparkles size={16} className="text-brand" />
+          <h2 className="text-[13.5px] font-semibold">Manager Agent</h2>
+        </div>
+
+        {!agentConfig ? (
+          availableProviders.length === 0 ? (
+            <p className="text-[13px] text-fg-muted">
+              No model provider is configured for this organization yet. Add an API key under <span className="font-medium text-fg">Settings &gt; Models</span> first, then come back here to choose a model.
+            </p>
+          ) : (
+            <div>
+              <p className="mb-3 text-[13px] text-fg-muted">Choose which model the Manager Agent uses — this is a deliberate choice, never inferred automatically.</p>
+              <form action={setManagerAgentConfigAction} className="flex flex-wrap items-end gap-2">
+                <div>
+                  <label className="field-label">Provider</label>
+                  <select className="field" name="modelProvider" defaultValue={availableProviders[0]}>
+                    {availableProviders.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="field-label">Model name</label>
+                  <input className="field" name="modelName" placeholder="gpt-4o-mini" required />
+                </div>
+                <button type="submit" className="btn-brand">
+                  Save
+                </button>
+              </form>
+            </div>
+          )
+        ) : (
+          <div>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[12.5px] text-fg-muted">
+                Configured: <span className="font-medium text-fg">{agentConfig.modelProvider}/{agentConfig.modelName}</span>
+              </span>
+              <form action={generateMorningBriefAction}>
+                <button type="submit" className="btn-brand gap-1.5 text-[12.5px]">
+                  <Sparkles size={13} />
+                  Generate Morning Brief
+                </button>
+              </form>
+            </div>
+
+            {latestBrief ? (
+              <ManagerBriefView brief={latestBrief.content as unknown as MorningBrief} generatedAt={latestBrief.generatedAt} droppedClaimsCount={latestBrief.droppedClaimsCount} repById={repById} />
+            ) : (
+              <p className="text-[13px] text-fg-faint">No brief generated yet — click "Generate Morning Brief" to produce one from real data.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Priority 1: compliance — never buried */}

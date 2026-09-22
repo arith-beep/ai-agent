@@ -304,3 +304,59 @@ export async function updateFocusAreaAdoption(orgId: string, focusId: string, ad
     .returning();
   return focus;
 }
+
+// ---- Manager Agent config (explicit per-org model choice — never inferred) ----
+
+export async function getManagerAgentConfig(orgId: string) {
+  const db = getDb();
+  return db.query.managerAgentConfig.findFirst({ where: eq(schema.managerAgentConfig.orgId, orgId) });
+}
+
+export async function setManagerAgentConfig(input: { orgId: string; modelProvider: "openai" | "anthropic" | "google"; modelName: string; updatedByUserId?: string }) {
+  const db = getDb();
+  const [config] = await db
+    .insert(schema.managerAgentConfig)
+    .values(input)
+    .onConflictDoUpdate({
+      target: schema.managerAgentConfig.orgId,
+      set: { modelProvider: input.modelProvider, modelName: input.modelName, updatedByUserId: input.updatedByUserId, updatedAt: new Date() },
+    })
+    .returning();
+  return config;
+}
+
+// ---- Manager Agent briefs (persisted, citation-checked output — the agent's operational memory) ----
+
+export async function createManagerBrief(input: {
+  orgId: string;
+  type: "morning_brief" | "coaching_prep" | "eod_report";
+  repId?: string;
+  modelProvider: "openai" | "anthropic" | "google";
+  modelName: string;
+  content: Record<string, unknown>;
+  evidenceRepIds?: string[];
+  evidenceCaseIds?: string[];
+  evidenceThreadIds?: string[];
+  droppedClaimsCount?: number;
+}) {
+  const db = getDb();
+  const [brief] = await db.insert(schema.managerBriefs).values(input).returning();
+  if (!brief) throw new Error("Failed to persist manager brief.");
+  return brief;
+}
+
+export async function getLatestBrief(orgId: string, type: "morning_brief" | "coaching_prep" | "eod_report", repId?: string) {
+  const db = getDb();
+  return db.query.managerBriefs.findFirst({
+    where: and(eq(schema.managerBriefs.orgId, orgId), eq(schema.managerBriefs.type, type), repId ? eq(schema.managerBriefs.repId, repId) : undefined),
+    orderBy: (b, { desc }) => [desc(b.generatedAt)],
+  });
+}
+
+export async function listBriefsForRep(repId: string, type?: "morning_brief" | "coaching_prep" | "eod_report") {
+  const db = getDb();
+  return db.query.managerBriefs.findMany({
+    where: and(eq(schema.managerBriefs.repId, repId), type ? eq(schema.managerBriefs.type, type) : undefined),
+    orderBy: (b, { desc }) => [desc(b.generatedAt)],
+  });
+}

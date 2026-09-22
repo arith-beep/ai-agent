@@ -41,7 +41,11 @@ export async function listOrgsForUser(userId: string) {
     .select({ org: schema.organizations, role: schema.orgMembers.role })
     .from(schema.orgMembers)
     .innerJoin(schema.organizations, eq(schema.organizations.id, schema.orgMembers.orgId))
-    .where(eq(schema.orgMembers.userId, userId));
+    .where(eq(schema.orgMembers.userId, userId))
+    // requireCurrentContext() treats memberships[0] as "current" (a documented MVP
+    // simplification — no org switcher yet) — without an explicit order, Postgres can
+    // return rows in an arbitrary order unrelated to when the membership was created.
+    .orderBy(schema.orgMembers.createdAt);
 }
 
 export async function getMembership(orgId: string, userId: string) {

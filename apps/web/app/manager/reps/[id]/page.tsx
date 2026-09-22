@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ClipboardList, ShieldAlert, ListChecks, Plus } from "lucide-react";
+import { ChevronLeft, ClipboardList, ShieldAlert, ListChecks, Plus, Sparkles } from "lucide-react";
 import { requireManagerAccess } from "@/lib/manager-access";
 import { managerRepo } from "@ai-agent/storage";
+import type { CoachingPrep } from "@ai-agent/manager-agent";
 import { RepStatusBadge, SeedDataBadge, CoachingOutcomeBadge, ThreadStatusBadge, ComplianceStatusBadge, ComplianceSeverityBadge } from "../../_components/badges";
+import { CoachingPrepView } from "../../_components/coaching-prep-view";
 import {
   logSnapshotAction,
   createCoachingSessionAction,
@@ -13,6 +15,7 @@ import {
   createComplianceCaseAction,
   updateRepStatusAction,
 } from "@/lib/actions/manager-actions";
+import { generateCoachingPrepAction } from "@/lib/actions/manager-agent-actions";
 
 function daysAgo(n: number): Date {
   const d = new Date();
@@ -33,11 +36,13 @@ export default async function RepDetailPage({ params, searchParams }: { params: 
   const rep = await managerRepo.getRep(ctx.orgId, id);
   if (!rep) notFound();
 
-  const [snapshots, coachingSessions, threads, complianceCases] = await Promise.all([
+  const [snapshots, coachingSessions, threads, complianceCases, agentConfig, latestCoachingPrep] = await Promise.all([
     managerRepo.listSnapshotsForRep(id, daysAgo(14)),
     managerRepo.listCoachingSessionsForRep(id),
     managerRepo.listOpenThreads(ctx.orgId, { repId: id }),
     managerRepo.listComplianceCases(ctx.orgId, { repId: id }),
+    managerRepo.getManagerAgentConfig(ctx.orgId),
+    managerRepo.getLatestBrief(ctx.orgId, "coaching_prep", id),
   ]);
 
   const maxSales = Math.max(1, ...snapshots.map((s) => s.sales));
@@ -126,6 +131,34 @@ export default async function RepDetailPage({ params, searchParams }: { params: 
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* AI Coaching Prep — draft only; the manager still runs and logs the real session below */}
+          <div className="surface p-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-fg">
+                <Sparkles size={16} className="text-brand" />
+                <h2 className="text-[13.5px] font-medium">AI Coaching Prep</h2>
+              </div>
+              {agentConfig ? (
+                <form action={generateCoachingPrepAction}>
+                  <input type="hidden" name="repId" value={rep.id} />
+                  <button type="submit" className="btn-outline gap-1.5 text-[12px]">
+                    <Sparkles size={13} />
+                    Prepare with AI
+                  </button>
+                </form>
+              ) : (
+                <Link href="/manager" className="text-[12px] text-brand hover:underline">
+                  Set up a model first
+                </Link>
+              )}
+            </div>
+            {latestCoachingPrep ? (
+              <CoachingPrepView prep={latestCoachingPrep.content as unknown as CoachingPrep} generatedAt={latestCoachingPrep.generatedAt} droppedClaimsCount={latestCoachingPrep.droppedClaimsCount} />
+            ) : (
+              <p className="text-[13px] text-fg-faint">No AI prep generated yet for this rep — the coaching history below is what you've actually logged.</p>
+            )}
           </div>
 
           {/* Coaching history */}
