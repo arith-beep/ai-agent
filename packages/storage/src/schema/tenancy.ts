@@ -34,6 +34,18 @@ export const orgMembers = pgTable(
   (table) => [uniqueIndex("org_members_org_user_idx").on(table.orgId, table.userId)],
 );
 
+/** Short-lived, single-use tokens for the "forgot password" flow — tokenHash is sha256(rawToken); the raw token only ever exists in the reset link. */
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const departments = pgTable("departments", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id")

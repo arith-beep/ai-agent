@@ -6,3 +6,4 @@ export * from "./workflow";
 export * from "./execution-events";
 export * from "./task";
 export * from "./span";
+export * from "./sales";

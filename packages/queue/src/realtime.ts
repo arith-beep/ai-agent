@@ -18,7 +18,8 @@ export async function publishExecutionEvent(runId: string, event: ExecutionEvent
  * commands). Returns an unsubscribe function that closes that connection.
  */
 export function subscribeToRun(runId: string, onEvent: (event: ExecutionEvent) => void): () => void {
-  const url = process.env.REDIS_URL ?? "redis://localhost:6379";
+  const url = process.env.REDIS_URL;
+  if (!url) throw new Error("REDIS_URL is not set — no queue/worker is configured for this deployment.");
   const subscriber = new Redis(url);
   const channel = channelForRun(runId);
 

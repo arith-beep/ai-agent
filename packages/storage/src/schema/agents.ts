@@ -5,7 +5,7 @@ import { knowledgeBases } from "./knowledge";
 import { workflows } from "./workflows";
 
 export const agentStatusEnum = pgEnum("agent_status", ["draft", "enabled", "disabled"]);
-export const modelProviderEnum = pgEnum("model_provider", ["openai", "anthropic", "google"]);
+export const modelProviderEnum = pgEnum("model_provider", ["openai", "anthropic", "google", "openrouter"]);
 export const agentConnectionTypeEnum = pgEnum("agent_connection_type", ["peer", "reports_to", "manages", "delegates_to"]);
 export const kpiPeriodEnum = pgEnum("kpi_period", ["daily", "weekly", "monthly"]);
 

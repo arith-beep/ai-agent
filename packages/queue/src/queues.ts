@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   scheduledTrigger: "scheduled-trigger",
   embedMemory: "embed-memory",
   ingestKnowledgeDocument: "ingest-knowledge-document",
+  ingestSalesKnowledgeSource: "ingest-sales-knowledge-source",
 } as const;
 
 export interface AgentRunJobData {
@@ -48,6 +49,10 @@ export interface IngestKnowledgeDocumentJobData {
   documentId: string;
 }
 
+export interface IngestSalesKnowledgeSourceJobData {
+  sourceId: string;
+}
+
 const priorityByMessagePriority: Record<string, number> = {
   urgent: 1,
   high: 2,
@@ -74,6 +79,7 @@ interface QueueHandles {
   scheduledTrigger: Queue<ScheduledTriggerJobData>;
   embedMemory: Queue<EmbedMemoryJobData>;
   ingestKnowledgeDocument: Queue<IngestKnowledgeDocumentJobData>;
+  ingestSalesKnowledgeSource: Queue<IngestSalesKnowledgeSourceJobData>;
 }
 
 // See packages/storage/src/db.ts: each BullMQ Queue duplicates the Redis
@@ -97,6 +103,7 @@ export function getQueues(): QueueHandles {
       scheduledTrigger: new Queue(QUEUE_NAMES.scheduledTrigger, { connection, defaultJobOptions: { attempts: 1 } }),
       embedMemory: new Queue(QUEUE_NAMES.embedMemory, { connection, defaultJobOptions }),
       ingestKnowledgeDocument: new Queue(QUEUE_NAMES.ingestKnowledgeDocument, { connection, defaultJobOptions }),
+      ingestSalesKnowledgeSource: new Queue(QUEUE_NAMES.ingestSalesKnowledgeSource, { connection, defaultJobOptions }),
     };
   }
   return globalThis.__aiAgentQueues;

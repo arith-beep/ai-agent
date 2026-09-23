@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/platform", label: "Dashboard" },
   { href: "/agents", label: "Agents" },
   { href: "/workflows", label: "Workflows" },
   { href: "/knowledge", label: "Knowledge" },
@@ -34,8 +34,14 @@ export function Sidebar({ orgName }: { orgName: string }) {
         </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
+        <a
+          href="/sales"
+          className="mb-2 block rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
+        >
+          Sales Agent Builder →
+        </a>
         {NAV_ITEMS.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

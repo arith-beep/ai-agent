@@ -9,7 +9,10 @@ const ENV_VAR_BY_PROVIDER: Record<ModelProvider, string> = {
   openai: "OPENAI_API_KEY",
   anthropic: "ANTHROPIC_API_KEY",
   google: "GOOGLE_GENERATIVE_AI_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
 };
+
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 async function getApiKey(orgId: string, provider: ModelProvider): Promise<string> {
   const fromDb = await credentialsRepo.getDecryptedApiKey(orgId, provider);
@@ -41,6 +44,29 @@ export async function resolveModel(orgId: string, ref: { provider: ModelProvider
       return createAnthropic({ apiKey })(ref.model);
     case "google":
       return createGoogleGenerativeAI({ apiKey })(ref.model);
+    case "openrouter":
+      // OpenRouter exposes an OpenAI-compatible chat completions endpoint that
+      // proxies to many upstream models; "compatible" mode relaxes the strict
+      // OpenAI-only response validation the AI SDK otherwise applies.
+      //
+      // structuredOutputs: false is required, not optional, here. The AI
+      // SDK's @ai-sdk/openai decides whether a model supports OpenAI's
+      // "strict" structured tool-calling mode with
+      // `modelId.startsWith("o") || modelId.startsWith("gpt-5")` — meant to
+      // detect o1/o3/gpt-5 reasoning models. OpenRouter's slug format
+      // prefixes every model with its provider (e.g. "openai/gpt-4o-mini"),
+      // which also starts with "o" and false-positives that check. That
+      // silently turned on `strict: true` for every tool call, which
+      // requires every property to be listed in JSON Schema's `required`
+      // (with nullable types standing in for real optionality) — our tools
+      // use plain Zod `.optional()` fields instead, so OpenAI's own strict
+      // validator rejected the request with a 400 ("'required' ... must
+      // include every key in properties. Missing 'repId'"), confirmed
+      // against the captured request/response in
+      // `_manager_agent_diag_log`. Explicitly forcing structuredOutputs to
+      // false overrides that false-positive without touching the modelId
+      // OpenRouter needs for routing.
+      return createOpenAI({ apiKey, baseURL: OPENROUTER_BASE_URL, compatibility: "compatible" })(ref.model, { structuredOutputs: false });
     default: {
       const exhaustive: never = ref.provider;
       throw new Error(`Unsupported model provider: ${exhaustive}`);

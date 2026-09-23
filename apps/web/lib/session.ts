@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { tenancyRepo } from "@ai-agent/storage";
+import { DEMO_CONTEXT, isDemoMode } from "./demo";
 
 export interface CurrentContext {
   userId: string;
@@ -17,6 +18,8 @@ export interface CurrentContext {
  * is no org switcher yet, so every account effectively has one active org.
  */
 export async function requireCurrentContext(): Promise<CurrentContext> {
+  if (isDemoMode()) return DEMO_CONTEXT;
+
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 

@@ -41,7 +41,11 @@ export async function listOrgsForUser(userId: string) {
     .select({ org: schema.organizations, role: schema.orgMembers.role })
     .from(schema.orgMembers)
     .innerJoin(schema.organizations, eq(schema.organizations.id, schema.orgMembers.orgId))
-    .where(eq(schema.orgMembers.userId, userId));
+    .where(eq(schema.orgMembers.userId, userId))
+    // requireCurrentContext() treats memberships[0] as "current" (a documented MVP
+    // simplification — no org switcher yet) — without an explicit order, Postgres can
+    // return rows in an arbitrary order unrelated to when the membership was created.
+    .orderBy(schema.orgMembers.createdAt);
 }
 
 export async function getMembership(orgId: string, userId: string) {
@@ -58,6 +62,30 @@ export async function listOrgMembers(orgId: string) {
     .from(schema.orgMembers)
     .innerJoin(schema.users, eq(schema.users.id, schema.orgMembers.userId))
     .where(eq(schema.orgMembers.orgId, orgId));
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string) {
+  const db = getDb();
+  await db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, userId));
+}
+
+export async function createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date) {
+  const db = getDb();
+  const [row] = await db.insert(schema.passwordResetTokens).values({ userId, tokenHash, expiresAt }).returning();
+  return row;
+}
+
+/** Returns the token row only if it exists, hasn't been used, and hasn't expired. */
+export async function getValidPasswordResetToken(tokenHash: string) {
+  const db = getDb();
+  const row = await db.query.passwordResetTokens.findFirst({ where: eq(schema.passwordResetTokens.tokenHash, tokenHash) });
+  if (!row || row.usedAt || row.expiresAt.getTime() < Date.now()) return null;
+  return row;
+}
+
+export async function markPasswordResetTokenUsed(id: string) {
+  const db = getDb();
+  await db.update(schema.passwordResetTokens).set({ usedAt: new Date() }).where(eq(schema.passwordResetTokens.id, id));
 }
 
 export async function listDepartments(orgId: string) {
