@@ -20,13 +20,6 @@ function statusCategory(statusCode: number | undefined): string {
 export type GenerationErrorDiagnostic = {
   userMessage: string;
   logDetail: string;
-  /** Present only for an APICallError — the raw material for the diagnostic-log insert in runner.ts. */
-  apiDetail?: {
-    statusCode: number | undefined;
-    url: string;
-    responseBody: string | undefined;
-    requestBodyValues: unknown;
-  };
 };
 
 /**
@@ -45,12 +38,6 @@ export function describeGenerationError(error: unknown, phase: "evidence gatheri
     return {
       userMessage: `OpenRouter call failed during ${phase} (HTTP ${unwrapped.statusCode ?? "unknown"}): ${category}. Upstream message: "${upstreamMessage}".`,
       logDetail: `[manager-agent] APICallError during ${phase}: status=${unwrapped.statusCode} url=${unwrapped.url} isRetryable=${unwrapped.isRetryable} message=${upstreamMessage} body=${bodySnippet}`,
-      apiDetail: {
-        statusCode: unwrapped.statusCode,
-        url: unwrapped.url,
-        responseBody: typeof unwrapped.responseBody === "string" ? redact(unwrapped.responseBody) : undefined,
-        requestBodyValues: unwrapped.requestBodyValues,
-      },
     };
   }
 
