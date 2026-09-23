@@ -1,6 +1,6 @@
 import { generateText, generateObject, type LanguageModel } from "ai";
 import { resolveManagerModel } from "@ai-agent/model-providers";
-import { managerRepo } from "@ai-agent/storage";
+import { managerRepo, recordManagerAgentDiag } from "@ai-agent/storage";
 import { Evidence } from "./evidence";
 import { buildManagerTools } from "./tools";
 import { buildMorningBriefSystemPrompt, buildCoachingPrepSystemPrompt } from "./system-prompt";
@@ -32,6 +32,15 @@ async function gatherEvidence(orgId: string, model: LanguageModel, system: strin
   return evidence;
 }
 
+async function handleGenerationError(orgId: string, error: unknown, phase: "evidence gathering" | "brief synthesis"): Promise<{ status: "error"; message: string }> {
+  const { userMessage, logDetail, apiDetail } = describeGenerationError(error, phase);
+  console.error(logDetail);
+  if (apiDetail) {
+    await recordManagerAgentDiag({ orgId, phase, ...apiDetail });
+  }
+  return { status: "error", message: userMessage };
+}
+
 function evidenceContext(evidence: Evidence): string {
   return JSON.stringify({
     reps: [...evidence.reps.values()],
@@ -53,9 +62,7 @@ export async function generateMorningBrief(orgId: string): Promise<GenerationRes
   try {
     evidence = await gatherEvidence(orgId, resolution.model, system, "Gather what you need for today's morning brief using your tools, then stop.");
   } catch (error) {
-    const { userMessage, logDetail } = describeGenerationError(error, "evidence gathering");
-    console.error(logDetail);
-    return { status: "error", message: userMessage };
+    return handleGenerationError(orgId, error, "evidence gathering");
   }
 
   try {
@@ -81,9 +88,7 @@ export async function generateMorningBrief(orgId: string): Promise<GenerationRes
 
     return { status: "ready", content: validated.content, droppedClaimsCount: validated.droppedClaimsCount, droppedDetails: validated.droppedDetails, briefId: brief.id };
   } catch (error) {
-    const { userMessage, logDetail } = describeGenerationError(error, "brief synthesis");
-    console.error(logDetail);
-    return { status: "error", message: userMessage };
+    return handleGenerationError(orgId, error, "brief synthesis");
   }
 }
 
@@ -101,9 +106,7 @@ export async function prepareCoachingSession(orgId: string, repId: string): Prom
       `Gather what you need to prepare a coaching session for rep ${repId} using your tools (their coaching history first, then their trend, then any open threads/compliance tied to them), then stop.`,
     );
   } catch (error) {
-    const { userMessage, logDetail } = describeGenerationError(error, "evidence gathering");
-    console.error(logDetail);
-    return { status: "error", message: userMessage };
+    return handleGenerationError(orgId, error, "evidence gathering");
   }
 
   try {
@@ -130,8 +133,6 @@ export async function prepareCoachingSession(orgId: string, repId: string): Prom
 
     return { status: "ready", content: validated.content, droppedClaimsCount: validated.droppedClaimsCount, droppedDetails: validated.droppedDetails, briefId: brief.id };
   } catch (error) {
-    const { userMessage, logDetail } = describeGenerationError(error, "brief synthesis");
-    console.error(logDetail);
-    return { status: "error", message: userMessage };
+    return handleGenerationError(orgId, error, "brief synthesis");
   }
 }

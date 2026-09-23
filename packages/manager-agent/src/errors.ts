@@ -17,13 +17,25 @@ function statusCategory(statusCode: number | undefined): string {
   return "OpenRouter returned an error";
 }
 
+export type GenerationErrorDiagnostic = {
+  userMessage: string;
+  logDetail: string;
+  /** Present only for an APICallError — the raw material for the diagnostic-log insert in runner.ts. */
+  apiDetail?: {
+    statusCode: number | undefined;
+    url: string;
+    responseBody: string | undefined;
+    requestBodyValues: unknown;
+  };
+};
+
 /**
  * Turns an error thrown by the AI SDK during evidence gathering or structured
  * synthesis into (a) a short, actionable category safe to show a manager in
  * the UI, and (b) a fuller sanitized detail string for server-side logs —
  * never the raw request (which could carry the Authorization header).
  */
-export function describeGenerationError(error: unknown, phase: "evidence gathering" | "brief synthesis"): { userMessage: string; logDetail: string } {
+export function describeGenerationError(error: unknown, phase: "evidence gathering" | "brief synthesis"): GenerationErrorDiagnostic {
   const unwrapped = error instanceof RetryError ? (error.lastError ?? error) : error;
 
   if (unwrapped instanceof APICallError) {
@@ -33,6 +45,12 @@ export function describeGenerationError(error: unknown, phase: "evidence gatheri
     return {
       userMessage: `OpenRouter call failed during ${phase} (HTTP ${unwrapped.statusCode ?? "unknown"}): ${category}. Upstream message: "${upstreamMessage}".`,
       logDetail: `[manager-agent] APICallError during ${phase}: status=${unwrapped.statusCode} url=${unwrapped.url} isRetryable=${unwrapped.isRetryable} message=${upstreamMessage} body=${bodySnippet}`,
+      apiDetail: {
+        statusCode: unwrapped.statusCode,
+        url: unwrapped.url,
+        responseBody: typeof unwrapped.responseBody === "string" ? redact(unwrapped.responseBody) : undefined,
+        requestBodyValues: unwrapped.requestBodyValues,
+      },
     };
   }
 
