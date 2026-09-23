@@ -6,6 +6,7 @@ import { managerRepo } from "@ai-agent/storage";
 import type { CoachingPrep } from "@ai-agent/manager-agent";
 import { RepStatusBadge, SeedDataBadge, CoachingOutcomeBadge, ThreadStatusBadge, ComplianceStatusBadge, ComplianceSeverityBadge } from "../../_components/badges";
 import { CoachingPrepView } from "../../_components/coaching-prep-view";
+import { GenerateCoachingPrepButton } from "../../_components/generate-coaching-prep-button";
 import {
   logSnapshotAction,
   createCoachingSessionAction,
@@ -15,7 +16,6 @@ import {
   createComplianceCaseAction,
   updateRepStatusAction,
 } from "@/lib/actions/manager-actions";
-import { generateCoachingPrepAction } from "@/lib/actions/manager-agent-actions";
 
 function daysAgo(n: number): Date {
   const d = new Date();
@@ -141,13 +141,7 @@ export default async function RepDetailPage({ params, searchParams }: { params: 
                 <h2 className="text-[13.5px] font-medium">AI Coaching Prep</h2>
               </div>
               {agentConfig ? (
-                <form action={generateCoachingPrepAction}>
-                  <input type="hidden" name="repId" value={rep.id} />
-                  <button type="submit" className="btn-outline gap-1.5 text-[12px]">
-                    <Sparkles size={13} />
-                    Prepare with AI
-                  </button>
-                </form>
+                <GenerateCoachingPrepButton repId={rep.id} />
               ) : (
                 <Link href="/manager" className="text-[12px] text-brand hover:underline">
                   Set up a model first

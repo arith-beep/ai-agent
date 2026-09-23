@@ -5,7 +5,8 @@ import { managerRepo, managerInsights, credentialsRepo } from "@ai-agent/storage
 import type { MorningBrief } from "@ai-agent/manager-agent";
 import { RepStatusBadge, ComplianceSeverityBadge } from "./_components/badges";
 import { ManagerBriefView } from "./_components/manager-brief-view";
-import { setManagerAgentConfigAction, generateMorningBriefAction } from "@/lib/actions/manager-agent-actions";
+import { GenerateBriefButton } from "./_components/generate-brief-button";
+import { setManagerAgentConfigAction } from "@/lib/actions/manager-agent-actions";
 
 function daysAgo(n: number): Date {
   const d = new Date();
@@ -130,12 +131,7 @@ export default async function ManagerOverviewPage({ searchParams }: { searchPara
               <span className="text-[12.5px] text-fg-muted">
                 Configured: <span className="font-medium text-fg">{agentConfig.modelProvider}/{agentConfig.modelName}</span>
               </span>
-              <form action={generateMorningBriefAction}>
-                <button type="submit" className="btn-brand gap-1.5 text-[12.5px]">
-                  <Sparkles size={13} />
-                  Generate Morning Brief
-                </button>
-              </form>
+              <GenerateBriefButton />
             </div>
 
             {latestBrief ? (

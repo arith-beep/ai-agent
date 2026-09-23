@@ -71,6 +71,8 @@ export async function signupAction(formData: FormData): Promise<AuthActionResult
   }
 }
 
+const MANAGER_ROLES = ["owner", "admin", "manager"];
+
 export async function loginAction(formData: FormData): Promise<AuthActionResult> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -80,20 +82,36 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
   // scope" error under Next 15, so signIn() must only ever be called once we already
   // know the credentials are valid.
   let valid = false;
+  let userId: string | undefined;
   try {
     const user = email && password ? await tenancyRepo.getUserByEmail(email) : null;
     valid = user?.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
+    userId = user?.id;
   } catch (error) {
     console.error("loginAction: credential lookup failed", error);
     return { ok: false, error: "We couldn't reach the database. Please try again in a moment." };
   }
-  if (!valid) {
+  if (!valid || !userId) {
     return { ok: false, error: "Incorrect email or password." };
   }
 
+  // Land manager/admin/owner roles directly on the AI Sales Manager — that's the
+  // primary demo surface for this account type. Everyone else keeps the existing
+  // Sales Agent Builder destination. Matches requireCurrentContext()'s own "first
+  // membership is current" rule (packages/storage tenancyRepo.listOrgsForUser).
+  let defaultDestination = "/sales";
   try {
-    const destination = (await signIn("credentials", { email, password, redirect: false, redirectTo: "/sales" })) as string;
-    return { ok: true, destination: destination || "/sales" };
+    const memberships = await tenancyRepo.listOrgsForUser(userId);
+    if (MANAGER_ROLES.includes(memberships[0]?.role ?? "")) {
+      defaultDestination = "/manager";
+    }
+  } catch (error) {
+    console.error("loginAction: role lookup failed, defaulting to /sales", error);
+  }
+
+  try {
+    const destination = (await signIn("credentials", { email, password, redirect: false, redirectTo: defaultDestination })) as string;
+    return { ok: true, destination: destination || defaultDestination };
   } catch (error) {
     if (error instanceof AuthError) {
       return { ok: false, error: "Something went wrong signing you in. Please try again." };
