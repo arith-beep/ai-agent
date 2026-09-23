@@ -6,6 +6,7 @@ import { buildManagerTools } from "./tools";
 import { buildMorningBriefSystemPrompt, buildCoachingPrepSystemPrompt } from "./system-prompt";
 import { morningBriefSchema, coachingPrepSchema, type MorningBrief, type CoachingPrep } from "./schemas";
 import { validateMorningBrief, validateCoachingPrep } from "./validate";
+import { describeGenerationError } from "./errors";
 
 const MAX_TOOL_STEPS = 6;
 
@@ -47,10 +48,17 @@ export async function generateMorningBrief(orgId: string): Promise<GenerationRes
   const resolution = await resolveManagerModel(orgId);
   if (resolution.status !== "ready") return resolution;
 
+  const system = buildMorningBriefSystemPrompt();
+  let evidence: Evidence;
   try {
-    const system = buildMorningBriefSystemPrompt();
-    const evidence = await gatherEvidence(orgId, resolution.model, system, "Gather what you need for today's morning brief using your tools, then stop.");
+    evidence = await gatherEvidence(orgId, resolution.model, system, "Gather what you need for today's morning brief using your tools, then stop.");
+  } catch (error) {
+    const { userMessage, logDetail } = describeGenerationError(error, "evidence gathering");
+    console.error(logDetail);
+    return { status: "error", message: userMessage };
+  }
 
+  try {
     const { object } = await generateObject({
       model: resolution.model,
       schema: morningBriefSchema,
@@ -73,7 +81,9 @@ export async function generateMorningBrief(orgId: string): Promise<GenerationRes
 
     return { status: "ready", content: validated.content, droppedClaimsCount: validated.droppedClaimsCount, droppedDetails: validated.droppedDetails, briefId: brief.id };
   } catch (error) {
-    return { status: "error", message: error instanceof Error ? error.message : String(error) };
+    const { userMessage, logDetail } = describeGenerationError(error, "brief synthesis");
+    console.error(logDetail);
+    return { status: "error", message: userMessage };
   }
 }
 
@@ -81,15 +91,22 @@ export async function prepareCoachingSession(orgId: string, repId: string): Prom
   const resolution = await resolveManagerModel(orgId);
   if (resolution.status !== "ready") return resolution;
 
+  const system = buildCoachingPrepSystemPrompt();
+  let evidence: Evidence;
   try {
-    const system = buildCoachingPrepSystemPrompt();
-    const evidence = await gatherEvidence(
+    evidence = await gatherEvidence(
       orgId,
       resolution.model,
       system,
       `Gather what you need to prepare a coaching session for rep ${repId} using your tools (their coaching history first, then their trend, then any open threads/compliance tied to them), then stop.`,
     );
+  } catch (error) {
+    const { userMessage, logDetail } = describeGenerationError(error, "evidence gathering");
+    console.error(logDetail);
+    return { status: "error", message: userMessage };
+  }
 
+  try {
     const { object } = await generateObject({
       model: resolution.model,
       schema: coachingPrepSchema,
@@ -113,6 +130,8 @@ export async function prepareCoachingSession(orgId: string, repId: string): Prom
 
     return { status: "ready", content: validated.content, droppedClaimsCount: validated.droppedClaimsCount, droppedDetails: validated.droppedDetails, briefId: brief.id };
   } catch (error) {
-    return { status: "error", message: error instanceof Error ? error.message : String(error) };
+    const { userMessage, logDetail } = describeGenerationError(error, "brief synthesis");
+    console.error(logDetail);
+    return { status: "error", message: userMessage };
   }
 }
