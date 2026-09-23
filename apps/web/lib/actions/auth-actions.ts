@@ -1,7 +1,6 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { tenancyRepo } from "@ai-agent/storage";
 import { signIn, signOut } from "@/lib/auth";
@@ -15,25 +14,38 @@ function slugify(name: string): string {
   );
 }
 
-export async function signupAction(formData: FormData) {
+/**
+ * Both actions below return a plain result object instead of calling
+ * redirect() themselves. Two independent, unrelated-looking production
+ * failures (a silent no-op, then a 500, now reported as an infinite client
+ * spinner) all trace back to relying on a Server Action's own redirect —
+ * whether next-auth's internal one or our own next/navigation call — to
+ * finish reliably. The client (login-form.tsx / signup-form.tsx) now does
+ * every navigation itself via router.push() once it receives a real result,
+ * under its own timeout, so a stuck server-side redirect can no longer leave
+ * the user staring at a spinner with nothing surfaced.
+ */
+export type AuthActionResult = { ok: true; destination: string } | { ok: false; error: string };
+
+export async function signupAction(formData: FormData): Promise<AuthActionResult> {
   const name = String(formData.get("name") ?? "");
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const orgName = String(formData.get("orgName") ?? "");
 
   if (!name || !email || !password || !orgName) {
-    redirect("/signup?error=" + encodeURIComponent("All fields are required."));
+    return { ok: false, error: "All fields are required." };
   }
   if (password.length < 8) {
-    redirect("/signup?error=" + encodeURIComponent("Password must be at least 8 characters."));
-  }
-
-  const existing = await tenancyRepo.getUserByEmail(email);
-  if (existing) {
-    redirect("/signup?error=" + encodeURIComponent("An account with that email already exists."));
+    return { ok: false, error: "Password must be at least 8 characters." };
   }
 
   try {
+    const existing = await tenancyRepo.getUserByEmail(email);
+    if (existing) {
+      return { ok: false, error: "An account with that email already exists." };
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await tenancyRepo.createUserWithPassword(email, name, passwordHash);
     const baseSlug = slugify(orgName);
@@ -41,67 +53,54 @@ export async function signupAction(formData: FormData) {
     await tenancyRepo.createOrganization({ name: orgName, slug, ownerUserId: user.id });
   } catch (error) {
     console.error("signupAction: failed to create account", error);
-    redirect("/signup?error=" + encodeURIComponent("We couldn't create your account — please try again in a moment."));
+    return { ok: false, error: "We couldn't create your account — please try again in a moment." };
   }
 
-  // redirect: false avoids signIn()'s own internal redirect() call, which has been
-  // observed to fail silently (no error, no redirect) when invoked from inside a
-  // Server Action under this Next 15 / next-auth v5-beta combination — see loginAction
-  // below, where the same pattern was confirmed against production. We perform the
-  // redirect ourselves instead, from a normal top-level Server Action return path.
-  let destination: string;
   try {
-    destination = (await signIn("credentials", { email, password, redirect: false, redirectTo: "/sales" })) as string;
+    const destination = (await signIn("credentials", { email, password, redirect: false, redirectTo: "/sales" })) as string;
+    return { ok: true, destination: destination || "/sales" };
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect("/login?error=" + encodeURIComponent("Account created — please sign in."));
+      return { ok: true, destination: "/login?error=" + encodeURIComponent("Account created — please sign in.") };
     }
     console.error("signupAction: signIn threw an unexpected error", error);
-    redirect("/login?error=" + encodeURIComponent("Account created, but we couldn't sign you in automatically — please sign in."));
+    return {
+      ok: true,
+      destination: "/login?error=" + encodeURIComponent("Account created, but we couldn't sign you in automatically — please sign in."),
+    };
   }
-  redirect(destination || "/sales");
 }
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(formData: FormData): Promise<AuthActionResult> {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
 
   // Verify credentials ourselves before calling signIn(): next-auth v5-beta's own
   // failure path for invalid Credentials throws an unrelated "headers outside request
   // scope" error under Next 15, so signIn() must only ever be called once we already
-  // know the credentials are valid. Any failure here (including a database error) must
-  // produce a visible message — never leave the user staring at an unchanged page.
+  // know the credentials are valid.
   let valid = false;
   try {
     const user = email && password ? await tenancyRepo.getUserByEmail(email) : null;
     valid = user?.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
   } catch (error) {
     console.error("loginAction: credential lookup failed", error);
-    redirect("/login?error=" + encodeURIComponent("We couldn't reach the database. Please try again in a moment."));
+    return { ok: false, error: "We couldn't reach the database. Please try again in a moment." };
   }
   if (!valid) {
-    redirect("/login?error=" + encodeURIComponent("Incorrect email or password."));
+    return { ok: false, error: "Incorrect email or password." };
   }
 
-  // redirect: false avoids signIn()'s own internal redirect() call — confirmed against
-  // production that calling signIn() with its default auto-redirect from inside this
-  // Server Action silently swallows a successful sign-in (session cookie and redirect
-  // both fail to reach the browser, with no error surfaced). Hitting next-auth's own
-  // /api/auth/callback/credentials route directly works correctly and returns a real
-  // redirect with a session cookie, so the credential-checking and session-issuing logic
-  // itself is fine — only the Server-Action-internal auto-redirect path was broken.
-  // Requesting the URL instead and redirecting ourselves sidesteps that broken path.
-  let destination: string;
   try {
-    destination = (await signIn("credentials", { email, password, redirect: false, redirectTo: "/sales" })) as string;
+    const destination = (await signIn("credentials", { email, password, redirect: false, redirectTo: "/sales" })) as string;
+    return { ok: true, destination: destination || "/sales" };
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect("/login?error=" + encodeURIComponent("Something went wrong signing you in. Please try again."));
+      return { ok: false, error: "Something went wrong signing you in. Please try again." };
     }
     console.error("loginAction: signIn threw an unexpected error", error);
-    redirect("/login?error=" + encodeURIComponent("Something went wrong signing you in. Please try again."));
+    return { ok: false, error: "Something went wrong signing you in. Please try again." };
   }
-  redirect(destination || "/sales");
 }
 
 export async function logoutAction() {
