@@ -1,7 +1,27 @@
-import { tool } from "ai";
+import { tool, zodSchema, jsonSchema, type Schema } from "ai";
 import { z } from "zod";
 import { managerRepo, managerInsights } from "@ai-agent/storage";
 import { Evidence } from "./evidence";
+
+/**
+ * zod-to-json-schema (used internally by the AI SDK's `tool()` to convert
+ * our Zod parameter schemas) emits a top-level `$schema` key by default —
+ * confirmed by hand: every tool below serializes with
+ * `"$schema":"http://json-schema.org/draft-07/schema#"` alongside `type`/
+ * `properties`. That key isn't part of the OpenAI function-calling spec and
+ * is a known source of HTTP 400s from providers that validate tool
+ * `parameters` strictly (OpenRouter's routed backends among them). This is
+ * the leading candidate for the "Provider returned error" 400 during
+ * evidence gathering, not yet confirmed against a captured request in
+ * `_manager_agent_diag_log` — stripping it is safe regardless (every other
+ * consumer of standard JSON Schema ignores or accepts `$schema`), so it
+ * ships now rather than waiting on that confirmation.
+ */
+function cleanParams<T extends z.ZodTypeAny>(schema: T): Schema<z.infer<T>> {
+  const wrapped = zodSchema(schema);
+  const { $schema: _drop, ...rest } = wrapped.jsonSchema as Record<string, unknown>;
+  return jsonSchema(rest, { validate: wrapped.validate }) as Schema<z.infer<T>>;
+}
 
 /**
  * Every tool here is read-only — each one calls exactly one managerRepo
@@ -25,7 +45,7 @@ export function buildManagerTools(orgId: string, evidence: Evidence) {
   return {
     get_team_snapshot: tool({
       description: "Get every active rep on the roster and the team's aggregate performance over the last 14 days. Use this first to see who's on the team.",
-      parameters: z.object({}),
+      parameters: cleanParams(z.object({})),
       execute: async () => {
         const reps = await managerRepo.listReps(orgId, { status: "active" });
         const snapshots = await managerRepo.listSnapshotsForOrg(orgId, daysAgo(SNAPSHOT_WINDOW_DAYS));
@@ -60,7 +80,7 @@ export function buildManagerTools(orgId: string, evidence: Evidence) {
 
     get_coaching_history: tool({
       description: "Get the full coaching session history for a specific rep, including outcomes of past sessions. Use this before proposing a new coaching focus, to check whether this has come up before.",
-      parameters: z.object({ repId: z.string().uuid() }),
+      parameters: cleanParams(z.object({ repId: z.string().uuid() })),
       execute: async ({ repId }) => {
         const sessions = await managerRepo.listCoachingSessionsForRep(repId);
         for (const s of sessions) {
@@ -81,7 +101,7 @@ export function buildManagerTools(orgId: string, evidence: Evidence) {
 
     list_open_threads: tool({
       description: "List open commitment/follow-up/operational threads, optionally filtered to one rep. Use this to check for unresolved commitments.",
-      parameters: z.object({ repId: z.string().uuid().optional() }),
+      parameters: cleanParams(z.object({ repId: z.string().uuid().optional() })),
       execute: async ({ repId }) => {
         const threads = await managerRepo.listOpenThreads(orgId, { status: "open", repId });
         for (const t of threads) {
@@ -94,10 +114,12 @@ export function buildManagerTools(orgId: string, evidence: Evidence) {
 
     list_compliance_cases: tool({
       description: "List compliance cases, optionally filtered by status (default: open) or to one rep. Compliance always takes priority over everything else.",
-      parameters: z.object({
-        status: z.enum(["open", "under_review", "resolved", "escalated"]).optional().describe("Defaults to open if omitted"),
-        repId: z.string().uuid().optional(),
-      }),
+      parameters: cleanParams(
+        z.object({
+          status: z.enum(["open", "under_review", "resolved", "escalated"]).optional().describe("Defaults to open if omitted"),
+          repId: z.string().uuid().optional(),
+        }),
+      ),
       execute: async ({ status, repId }) => {
         const cases = await managerRepo.listComplianceCases(orgId, { status: status ?? "open", repId });
         for (const c of cases) {
@@ -110,7 +132,7 @@ export function buildManagerTools(orgId: string, evidence: Evidence) {
 
     get_current_focus_area: tool({
       description: "Get the team's current weekly focus area, if one is set.",
-      parameters: z.object({}),
+      parameters: cleanParams(z.object({})),
       execute: async () => {
         const focus = await managerRepo.getCurrentFocusArea(orgId);
         evidence.focusArea = focus ? { theme: focus.theme, rationale: focus.rationale } : null;
@@ -121,7 +143,7 @@ export function buildManagerTools(orgId: string, evidence: Evidence) {
 
     get_previous_brief: tool({
       description: "Get the most recently generated brief of the given type (morning_brief or coaching_prep for a specific rep), for continuity with what was already said. Returns null if none exists yet.",
-      parameters: z.object({ type: z.enum(["morning_brief", "coaching_prep"]), repId: z.string().uuid().optional() }),
+      parameters: cleanParams(z.object({ type: z.enum(["morning_brief", "coaching_prep"]), repId: z.string().uuid().optional() })),
       execute: async ({ type, repId }) => {
         const brief = await managerRepo.getLatestBrief(orgId, type, repId);
         const summary = brief ? JSON.stringify(brief.content) : null;
