@@ -121,6 +121,12 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
   }
 }
 
-export async function logoutAction() {
-  await signOut({ redirectTo: "/login" });
+export async function logoutAction(): Promise<AuthActionResult> {
+  try {
+    const res = (await signOut({ redirect: false, redirectTo: "/login" })) as { redirect?: string } | undefined;
+    return { ok: true, destination: res?.redirect || "/login" };
+  } catch (error) {
+    console.error("logoutAction: signOut threw an unexpected error", error);
+    return { ok: true, destination: "/login" };
+  }
 }

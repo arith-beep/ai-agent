@@ -4,15 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 
-export function LandingNav({ authed }: { authed: boolean }) {
+export function LandingNav({ authed, dashboardHref }: { authed: boolean; dashboardHref: string }) {
   const [open, setOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-30 border-b border-hairline/70 bg-paper/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-fg text-[13px] font-semibold text-paper">S</span>
-          <span className="font-display text-[15px] font-semibold tracking-tight text-fg">Sales Agent Builder</span>
+          <span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-fg text-[13px] font-semibold text-paper">M</span>
+          <span className="font-display text-[15px] font-semibold tracking-tight text-fg">AI Sales Manager</span>
         </div>
 
         <nav className="hidden items-center gap-7 md:flex">
@@ -23,8 +23,8 @@ export function LandingNav({ authed }: { authed: boolean }) {
             Product
           </a>
           {authed ? (
-            <Link href="/sales" className="btn-brand !py-1.5 !px-4 text-[13.5px]">
-              Go to dashboard
+            <Link href={dashboardHref} className="btn-brand !py-1.5 !px-4 text-[13.5px]">
+              Open dashboard
             </Link>
           ) : (
             <>
@@ -32,7 +32,7 @@ export function LandingNav({ authed }: { authed: boolean }) {
                 Log in
               </Link>
               <Link href="/signup" className="btn-brand !py-1.5 !px-4 text-[13.5px]">
-                Build your Sales Agent
+                Get started
               </Link>
             </>
           )}
@@ -58,8 +58,8 @@ export function LandingNav({ authed }: { authed: boolean }) {
               Product
             </a>
             {authed ? (
-              <Link href="/sales" className="btn-brand w-full">
-                Go to dashboard
+              <Link href={dashboardHref} className="btn-brand w-full">
+                Open dashboard
               </Link>
             ) : (
               <>
@@ -67,7 +67,7 @@ export function LandingNav({ authed }: { authed: boolean }) {
                   Log in
                 </Link>
                 <Link href="/signup" className="btn-brand w-full">
-                  Build your Sales Agent
+                  Get started
                 </Link>
               </>
             )}

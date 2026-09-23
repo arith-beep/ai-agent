@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Users, ListChecks, ShieldAlert, Target, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, ListChecks, ShieldAlert, Target, Menu, X } from "lucide-react";
 import { ThemeToggle } from "../../sales/_components/theme-toggle";
-import { logoutAction } from "@/lib/actions/auth-actions";
+import { LogoutButton } from "../../_components/logout-button";
 
 const NAV_ITEMS = [
   { href: "/manager", label: "Overview", icon: LayoutDashboard },
@@ -95,12 +95,7 @@ export function ManagerSidebar({ orgName }: { orgName: string }) {
               <Link href="/sales" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
                 ← Sales Agents
               </Link>
-              <form action={logoutAction}>
-                <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted">
-                  <LogOut size={12} strokeWidth={1.75} />
-                  Log out
-                </button>
-              </form>
+              <LogoutButton className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" />
             </div>
           </aside>
         </div>
@@ -116,12 +111,7 @@ export function ManagerSidebar({ orgName }: { orgName: string }) {
           <Link href="/sales" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
             ← Sales Agents
           </Link>
-          <form action={logoutAction}>
-            <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" title="Log out">
-              <LogOut size={12} strokeWidth={1.75} />
-              Log out
-            </button>
-          </form>
+          <LogoutButton className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" title="Log out" />
         </div>
       </aside>
     </>

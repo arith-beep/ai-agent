@@ -3,22 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  LayoutDashboard,
-  Bot,
-  Users,
-  MessagesSquare,
-  BookOpen,
-  Plug,
-  BarChart3,
-  Settings,
-  Menu,
-  X,
-  LogOut,
-  UserCog,
-} from "lucide-react";
+import { LayoutDashboard, Bot, Users, MessagesSquare, BookOpen, Plug, BarChart3, Settings, Menu, X, UserCog } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
-import { logoutAction } from "@/lib/actions/auth-actions";
+import { LogoutButton } from "../../_components/logout-button";
 
 const NAV_ITEMS = [
   { href: "/sales", label: "Overview", icon: LayoutDashboard },
@@ -112,12 +99,7 @@ export function SalesSidebar({ orgName }: { orgName: string }) {
               <Link href="/platform" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
                 ← Agent Platform
               </Link>
-              <form action={logoutAction}>
-                <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted">
-                  <LogOut size={12} strokeWidth={1.75} />
-                  Log out
-                </button>
-              </form>
+              <LogoutButton className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" />
             </div>
           </aside>
         </div>
@@ -133,12 +115,7 @@ export function SalesSidebar({ orgName }: { orgName: string }) {
           <Link href="/platform" className="text-[11.5px] text-fg-faint hover:text-fg-muted">
             ← Agent Platform
           </Link>
-          <form action={logoutAction}>
-            <button type="submit" className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" title="Log out">
-              <LogOut size={12} strokeWidth={1.75} />
-              Log out
-            </button>
-          </form>
+          <LogoutButton className="flex items-center gap-1.5 text-[11.5px] text-fg-faint hover:text-fg-muted" title="Log out" />
         </div>
       </aside>
     </>

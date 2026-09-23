@@ -1,14 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Blocks, BookOpen, Plug, FlaskConical, Rocket } from "lucide-react";
+import { LayoutDashboard, ShieldAlert, Users, GraduationCap, ListChecks } from "lucide-react";
 
 const STEPS = [
-  { icon: Blocks, label: "Build", copy: "Describe your business in one prompt, or configure identity and playbook by hand." },
-  { icon: BookOpen, label: "Train", copy: "Add pricing pages, docs, or pasted text — your agent answers only from what it knows." },
-  { icon: Plug, label: "Connect", copy: "Attach lead capture, meeting requests, human handoff, or your own webhooks." },
-  { icon: FlaskConical, label: "Test", copy: "Talk to your agent in a live playground and inspect exactly how it reasons." },
-  { icon: Rocket, label: "Deploy", copy: "Publish it and start qualifying real conversations, with every lead tracked." },
+  { icon: LayoutDashboard, label: "Monitor", copy: "See team dials, connects, and 14-day trends the moment you log in." },
+  { icon: ShieldAlert, label: "Compliance first", copy: "Open cases surface for your review before anything else — never auto-resolved." },
+  { icon: Users, label: "Investigate", copy: "Open a rep's profile for their real trend, open threads, and coaching history." },
+  { icon: GraduationCap, label: "Coach", copy: "Generate an evidence-backed coaching prep before every 1:1, grounded in past sessions." },
+  { icon: ListChecks, label: "Stay in control", copy: "Every suggestion cites its source. The AI never disciplines or acts on your behalf." },
 ];
 
 export function HowItWorks() {
@@ -24,7 +24,7 @@ export function HowItWorks() {
         >
           <p className="mb-3 text-[12.5px] font-semibold uppercase tracking-wider text-brand">How it works</p>
           <h2 className="font-display text-balance text-[30px] font-semibold tracking-tight text-fg sm:text-[36px]">
-            From idea to a live agent, five steps
+            A daily rhythm for running the floor
           </h2>
         </motion.div>
 
